@@ -13,6 +13,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
 ```
 
 # Practical Exercise 1
@@ -83,6 +84,8 @@ conda env create -f methods3_environment.yml
 conda activate methods3
 ## after activation, you can run Spyder, (IDE)
 spyder
+
+
 ```
 
 ![__Figure__: _Spyder_](images/spyder.png)
@@ -90,7 +93,7 @@ spyder
 ### Check that it works
 
 ```{python}
-a = 2 + 2
+a = 3+2
 b = a + 3
 print(b)
 
@@ -104,12 +107,13 @@ https://www.cs.utexas.edu/users/EWD/transcriptions/EWD08xx/EWD831.html
 
 # 3) Brushing up on the General Linear Model
 
-We'll do a light start and get you back in the game of thinking about formulae and how to build your linear models  
+We'll do a light start and get you back in the game of thinking about formulae and how to build your linear models.
 Finally, we'll have a few exercises, finishing off today's practical exercises 
 
 ## A list of formulae
 ```{r, eval=FALSE}
 formula <- y ~ x ## y as a function of x
+
 y ~ 1 ## model the intercept for "y"
 y ~ x ## model the main effect of x and the intercept for y
 y ~ x + 1 ## the same as above (+ 1 is implicit)
@@ -144,9 +148,11 @@ We can do a scatter plot, and it looks like there is some relation between fuel 
 Let's investigate this further
 
 ```{r,fig.height=5, fig.width=6}
+
 par(font.lab=2, font.axis=2, cex=1.2)
 plot(mpg ~ wt, data=mtcars, xlab='Weight (lb/1000)', ylab='Miles/(US) gallon',
      main='Scatter plot', ylim=c(0, 40))
+
 ```
 
 # Exercises and objectives
@@ -164,21 +170,114 @@ REMEMBER: In your report, make sure to include code that can reproduce the answe
 
 ## Exercise 1
 The general linear model: $Y = X \beta + \epsilon$:  
-Do a linear regression, expressing fuel usage as a function of weight using the function __lm__  
+Do a linear regression, expressing fuel usage as a function of weight using the function __lm__
 ```{r, eval=FALSE}
 data(mtcars)
-model <- lm(formula=..., data=...)
 ```
-1. extract $\hat{\beta}$, $Y$, $\hat{Y}$, $X$ and $\epsilon$ from __model__ (hint: have a look at the function __model.matrix__)  
+1. extract $\hat{\beta}$, $Y$, $\hat{Y}$, $X$ and $\epsilon$ from __model__ (hint: have a look at the function __model.matrix__)
+```{r}
+X <- model.matrix(lm(formula=mpg~wt, data=mtcars))
+
+y <- mtcars$mpg
+
+t(X)
+
+
+t(X) %*% X
+
+
+solve(t(X) %*% X)
+
+
+solve(t(X) %*% X) %*% t(X)
+
+bhat <- solve(t(X) %*% X) %*% t(X) %*% y
+bhat
+
+#finding epsilon
+yhat <- X %*% bhat
+
+errhat <- y - yhat
+
+errhat # one value for each row
+
+#standard deviation
+sigmahat <- sqrt(t(errhat) %*% errhat / 10)
+sigmahat # = 5.27
+```
+
     i. create a plot that illustrates $Y$ and $\hat{Y}$ (if you are feeling ambitious, also include $\epsilon$ (hint: you can use the function __arrows__))
+```{r}
+###########
+test <- lm(y ~ X[,2])
+
+plot(test)
+
+# Plotting data
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+    geom_point(colour = "darkred") +
+    geom_abline(intercept = b[1], slope = b[2], colour = "darkgreen") +
+    geom_abline(intercept = bhat[1], slope = bhat[2], colour = "darkblue")
+```
+
 2. estimate $\beta$ for a quadratic model ($y = {\beta}_{2} x^2 + {\beta}_{1} x + {\beta}_{0}$) using ordinary least squares _without_ using __lm__; $\hat{\beta} = {({X}^{T} X)}^{-1} {X}^{T} Y$ (hint: add a third column to $X$ from step 1)
-3. compare your acquired $\hat{\beta}$ with the output of the corresponding quadratic model created using __lm__ (hint: use the function __I__, see details under help and the sub-section formula operators here: https://www.datacamp.com/community/tutorials/r-formula-tutorial)  
-    i. create a plot that illustrates $Y$ and $\hat{Y}$ (if you are feeling ambitious, also include $\epsilon$ (hint: you can use the function __arrows__))  
+```{r}
+X <- rbind(mtcars$wt*wt)
+
+# Adding x^2 to matrix
+MatrixB <- cbind(X, c(mtcars$wt*mtcars$wt))
+MatrixB
+
+# doing the same thing again...
+t(MatrixB)
+
+t(MatrixB) %*% MatrixB
+
+solve(t(MatrixB) %*% MatrixB)
+
+solve(t(MatrixB) %*% MatrixB) %*% t(MatrixB)
+
+bhat <- solve(t(MatrixB) %*% MatrixB) %*% t(MatrixB) %*% y
+
+bhat
+
+
+
+```
+
+3. Compare your acquired $\hat{\beta}$ with the output of the corresponding quadratic model created using __lm__ (hint: use the function __I__, see details under help and the sub-section formula operators here: https://www.datacamp.com/community/tutorials/r-formula-tutorial)  
+    i. create a plot that illustrates $Y$ and $\hat{Y}$ (if you are feeling ambitious, also include $\epsilon$ (hint: you can use the function __arrows__))
+
+```{r}
+# Comparison of beta hat with the quadratic model: 
+# Personal comment: The following should give us the same values as the OLS by hand method (matrix multiplication) we've done above. The only reason for doing this a second time is to prove, that R's lm method does the same as the OLS. 
+lm(mtcars$mpg ~ MatrixB[,2] + MatrixB[,3])
+
+# Adding
+#linear fit
+linear<- mtcars %>% 
+  ggplot(aes(wt, mpg))+
+  geom_point(aes(y = yhat), colour = "orange") +
+  geom_point(aes(y = Y), colour = "darkred")
+
+#quadratic fit
+quadratic<- mtcars %>% 
+  ggplot(aes(wt, mpg))+
+  geom_point(aes(y = yhat_quadratic), colour = "blue") +
+  geom_point(aes(y = Y), colour = "darkred")
+
+linear/quadratic
+
+summary(model)
+summary(model1) #also this one has a better R^2 
+
+```
+
 
 ## Exercise 2
 Compare the plotted quadratic fit to the linear fit  
 
-1. which seems better?  
+1. which seems better?
 2. calculate the sum of squared errors, (show the calculation based on $\epsilon$). Which fit has the lower sum?  
 3. now make a cubic fit ($y = {\beta}_{3} x^3 + {\beta}_{2} x^2 + {\beta}_{1} x + {\beta}_{0}$) and compare it to the quadratic fit  
     i. create a plot that illustrates $Y$ and $\hat{Y}$ for both the cubic and the quadratic fits (plot them in the same plot)  
@@ -188,11 +287,48 @@ Compare the plotted quadratic fit to the linear fit
 ```{r, echo=FALSE}
 lm(mpg ~ 1, data=mtcars)
 ```
+
 ## Exercise 3
 Doing a logistic regression - estimating the probability that a car has automatic transmission (0) or manual transmission (1) based on its weight
 ```{r, eval=FALSE}
 data(mtcars)
-logistic.model <- glm(formula=..., data=..., family='binomial)
+
+summary(logistic.model <- glm(formula= am ~ wt, data=mtcars, family='binomial'))
+
+# Model estimates log odds for level 1
+boot::inv.logit(-4.024)
+
+logistic.model$coef
+
+
+b0 <- logistic.model$coef[1] # intercept
+X1 <- logistic.model$coef[2]
+
+X1_range <- seq(from=min(mtcars$wt), to=max(mtcars$wt), by=.01)
+
+a_logits <- b0 + X1*X1_range
+
+a_probs <- exp(a_logits)/(1 + exp(a_logits))
+
+# first you have to get the information into a long dataframe, which is what ggplot likes :)
+plot.data <- data.frame(a=boot::inv.logit(-4.024), X1=X1_range)
+
+plot.data <- gather(plot.data, key=group, value=prob, a)
+
+plot(X1_range, a_probs, 
+     ylim=c(0,1),
+     type="l", 
+     lwd=3, 
+     lty=2, 
+     col="gold", 
+     xlab="X1", ylab="P(outcome)", main="Header")
+
+# # # 
+ggplot(plot.data, aes(x=X1, y=prob, color=group)) + # asking it to set the color by the variable "group" is what makes it draw three different lines
+  geom_line(lwd=2) + 
+  labs(x="X1", y="P(outcome)", title="Probability of super important outcome") 
+
+
 ```
 
 Probabilities live on the range $(0, 1)$ - using the so-called logit function as a "link-function" we can map these onto the range $(-\infty, \infty)$, i.e. the real numbers.  
