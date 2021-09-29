@@ -1,8 +1,10 @@
 ---
 title: "practical_exercise_2, Methods 3, 2021, autumn semester"
-author: 'Jørgen Højlund Wibe'
+author: "Jørgen Højlund Wibe"
 date: "September 29 2021"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 <style type="text/css">
