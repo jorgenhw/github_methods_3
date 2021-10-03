@@ -1,7 +1,7 @@
 ---
 title: "practical_exercise_3, Methods 3, 2021, autumn semester"
-author: '[FILL IN YOUR NAME]'
-date: "[FILL IN THE DATE]"
+author: 'Jørgen Højlund Wibe'
+date: "October 3rd 2021"
 output: html_document
 ---
 
@@ -13,6 +13,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# Libraries in use
+library(pacman)
+p_load(tidyverse, lmer, lme4)
+
 ```
 
 # Exercises and objectives
@@ -21,8 +26,7 @@ The objectives of the exercises of this assignment are:
 2) Fit multilevel models for response times  
 3) Fit multilevel models for count data  
 
-REMEMBER: In your report, make sure to include code that can reproduce the answers requested in the exercises below (__MAKE A KNITTED VERSION__)  
-REMEMBER: This assignment will be part of your final portfolio
+This assignment will be part of your final portfolio
 
 ## Exercise 1
 
@@ -31,38 +35,143 @@ The data is associated with Experiment 2 of the article at the following DOI htt
 
 1) Put the data from all subjects into a single data frame  
 ```{r}
-experiment2 <- list.files(path = "/Users/WIBE/Desktop/cogSci/Methods_3/Git/emil/github_methods_3/week_03/data",     # Identify all csv files in folder
+# Loading data
+experiment2 <- list.files(path = "data",     # Identify all csv files in folder
                        pattern = "*.csv", full.names = TRUE) %>% 
   lapply(read_csv) %>%                                            # Store all files in list
-  bind_rows                                                      # Combine data sets into one data set 
-
+  bind_rows                                                      # Combine data sets into one data set
 ```
 
 
-2) Describe the data and construct extra variables from the existing variables  
+2) Describe the data and construct extra variables from the existing variables
     i. add a variable to the data frame and call it _correct_ (have it be a _logical_ variable). Assign a 1 to each row where the subject indicated the correct answer and a 0 to each row where the subject indicated the incorrect answer (__Hint:__ the variable _obj.resp_ indicates whether the subject answered "even", _e_ or "odd", _o_, and the variable _target_type_ indicates what was actually presented.
 
 ```{r}
 experiment2$correct <- (ifelse(experiment2$obj.resp == "e" & experiment2$target.type == "even", "1", 
-                              ifelse(experiment2$obj.resp == "o" & experiment2$target.type == "odd", "0", NA)))
+                              ifelse(experiment2$obj.resp == "o" & experiment2$target.type == "odd", "1",
+                                     ifelse(experiment2$obj.resp == "o" & experiment2$target.type == "even", "0",
+                                            ifelse(experiment2$obj.resp == "e" & experiment2$target.type == "odd", "0", NA)))))
+
+# Checking if things look as they're supposed to
+table(experiment2$correct)
+table(is.na(experiment2$correct))
+experiment2$correct <- as.factor(experiment2$correct)
 ```
 
 
-ii. describe what the following variables in the data frame contain, _trial.type_, _pas_, _trial_, _target.contrast_, _cue_, _task_, _target_type_, _rt.subj_, _rt.obj_, _obj.resp_, _subject_ and _correct_. (That means you can ignore the rest of the variables in your description). For each of them, indicate and argue for what `class` they should be classified into, e.g. _factor_, _numeric_ etc.  
+ii. describe what the following variables in the data frame contain, _trial.type_, _pas_, _trial_, _target.contrast_, _cue_, _task_, _target_type_, _rt.subj_, _rt.obj_, _obj.resp_, _subject_ and _correct_. (That means you can ignore the rest of the variables in your description). For each of them, indicate and argue for what `class` they should be classified into, e.g. _factor_, _numeric_ etc.
+
+
+
+**trial.type**
+The variable contains two levels and zero NA's; 
+level 1: "experiment" (12528 observations)
+level 2: "staircase" (5603 observations)
+Since it contains two unique levels if makes sense to make them as factors.
+
+'Experiment' describes the actual experimental rounds whereas 'staircase' trials were performed at the beginning of the study, before the researchers collected the actual experimental trials, which maintained a fixed level of contrast throughout.
+From WikiP: _"Staircases usually begin with a high intensity stimulus, which is easy to detect. The intensity is then reduced until the observer makes a mistake, at which point the staircase 'reverses' and intensity is increased until the observer responds correctly, triggering another reversal. The values for the last of these 'reversals' are then averaged."_
+
+**pas**
+Categorical variable contains four levels and zero NA's.
+Level 1 (coded 1): 5627 observations (you didn't see the stimuli)
+Level 2 (coded 2): 5176 observations (you saw a weak glimpse)
+Level 3 (coded 3): 3370 observations (allmost clear visual)
+Level 4 (coded 4): 3958 observations (saw stimuli clearly)
+
+'Pas' refers to the PAS-scale (Perceptual Awareness Scale) which has 4 categorically different ratings: No Experience (NE), Weak Glimpse (WG), Almost Clear Experience (ACE) and Clear Experience (CE).
+Since it describes for categorical value, it makes sense to convert the variable to a factor (coded below variable explanations)
+
+**trial**
+'trial' numbers each of the trials participants go through.
+From a histogram we can see that more participants went through trial 1-250 as opposed to trial 250-431. Also there seems to be a sudden drop in frequency of trials at trial 250.
+
 ```{r}
-# Describe the variables and make arguments as to which class they should belong to. Later...
-# pas1: you havn't seen stimuli
-# pas2: You have seen it 
+print(
+  trial_hist <- ggplot(experiment2, aes(trial)) +
+  geom_histogram(colour = "black", fill = "white")
+)
+# Zooming in on trial drop
+trial_hist +
+  xlim(225, 275)
+```
+Each trial contained a number of tasks presented to the participant on a screen.
+
+It's a numerical variable but since it only contains whole numbers it makes sense to convert it into an integer variable.
+
+*target.contrast*
+Numeric variable containing the grey-scale proportion of the target digit
+
+The variable contains float values and should thus be kept as numeric.
+
+**cue**
+Categorical variable containing the number code for cue ranging from 0-36
+One could argue that it should be a factor since there is not an internal hierarchi between the values.
+
+**task**
+Categorical value consisting of three levels:
+Level 1: pairs (number of obsevations = 6024)
+Level 2:  quadruplet (number of obsevations = 6057)
+Level 3: singles (number of obsevations = 6050)
+
+**target_type**
+Categorical variable with two levels and zero NA's
+Level 1: even (9066 observations)
+Level 2: odd (9065 observations)
+
+**rt.subj**
+Continuous variable
+Reaction time (seconds) on the PAS response
+
+**rt.obj**
+Continuous variable
+Reaction time (seconds) on the target digit
+
+**obj.resp**
+Categorical variable with two levels
+level 1: e (stands for even)
+level 2: 0 (stands for odd)
+
+The key actually pressed e for even and o for odd
+
+**subject**
+Participant/ID number
+
+**correct**
+A flag variable telling if response was either correct or incorrect; logical variable.
+
+**Recoding variables**
+```{r}
+experiment2$trial.type <- as.factor(experiment2$trial.type)
+experiment2$target.type <- as.factor(experiment2$target.type)
+experiment2$task <- as.factor(experiment2$task)
+experiment2$cue <- as.factor(experiment2$cue)
+experiment2$trial <- as.integer(experiment2$trial)
+experiment2$pas <- as.factor(experiment2$pas)
 ```
 
-iii. for the staircasing part __only__, create a plot for each subject where you plot the estimated function (on the _target.contrast_ range from 0-1) based on the fitted values of a model (use `glm`) that models _correct_ as dependent on _target.contrast_. These plots will be our _no-pooling_ model. Comment on the fits - do we have enough data to plot the logistic functions?  
+iii. for the staircasing part __only__, create a plot for each subject where you plot the estimated function (on the _target.contrast_ range from 0-1) based on the fitted values of a model (use `glm`) that models _correct_ as dependent on _target.contrast_. These plots will be our _no-pooling_ model. *Comment on the fits - do we have enough data to plot the logistic functions?*
 ```{r}
-model1 <- lmer(correct ~ target.contrast, data = experiment1)
+# Creating df only containing staircase trials
+exp2_staircase <- experiment2 %>% 
+  subset(experiment2$trial.type == "staircase")
+
+# No pooling model
+model1 <- glm(correct ~ target.contrast, data = exp2_staircase, family=binomial(link=logit))
+
+# Does this make sense?
+ggplot(exp2_staircase)+
+  geom_point(aes(x = target.contrast, y = fitted(model1), color = subject))+
+  geom_line(aes(x = target.contrast, y = fitted(model1))) +
+  facet_wrap(~subject)
 
 ```
 
 iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_ 
 ```{r}
+# Partial pooling model
+model2 <- glmer(correct ~ target.contrast + (1|subject), data = exp2_staircase, family = binomial(link = logit))
+
 
 ```
 
