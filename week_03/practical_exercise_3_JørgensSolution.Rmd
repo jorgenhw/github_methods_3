@@ -151,13 +151,18 @@ experiment2$pas <- as.factor(experiment2$pas)
 ```
 
 iii. for the staircasing part __only__, create a plot for each subject where you plot the estimated function (on the _target.contrast_ range from 0-1) based on the fitted values of a model (use `glm`) that models _correct_ as dependent on _target.contrast_. These plots will be our _no-pooling_ model. *Comment on the fits - do we have enough data to plot the logistic functions?*
+
+For this assignment we assume that you meant *complete pooling* and not *no pooling*. 
 ```{r}
 # Creating df only containing staircase trials
 exp2_staircase <- experiment2 %>% 
   subset(experiment2$trial.type == "staircase")
 
-# No pooling model
-model1 <- glm(correct ~ target.contrast, data = exp2_staircase, family=binomial(link=logit))
+# Complete pooling model
+model1 <- glm(correct ~ target.contrast, data = exp2_staircase, family = binomial(link=logit))
+levels(exp2_staircase$correct)
+#Printing
+summary(model1)
 
 # Does this make sense?
 ggplot(exp2_staircase)+
@@ -165,6 +170,10 @@ ggplot(exp2_staircase)+
   geom_line(aes(x = target.contrast, y = fitted(model1))) +
   facet_wrap(~subject)
 
+# Alternatively
+ggplot(exp2_staircase)+
+  geom_line(aes(x = target.contrast, y = fitted(model1))) +
+  facet_wrap(~subject)
 ```
 
 iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_ 
@@ -172,30 +181,165 @@ iv. on top of those plots, add the estimated functions (on the _target.contrast_
 # Partial pooling model
 model2 <- glmer(correct ~ target.contrast + (1|subject), data = exp2_staircase, family = binomial(link = logit))
 
+# ???? gotta be wrong...
+ggplot(exp2_staircase)+
+  geom_point(aes(x = target.contrast, y = fitted(model2), color = subject))+
+  geom_line(aes(x = target.contrast, y = fitted(model2))) +
+  facet_wrap(~subject)
+
 
 ```
 
-v. in your own words, describe how the partial pooling model allows for a better fit for each subject  
-```{r}
+v. in your own words, describe how the partial pooling model allows for a better fit for each subject
 
-```
+
+
 
 
 ## Exercise 2
 
 Now we __only__ look at the _experiment_ trials (_trial.type_)  
+```{r}
+exp2_experiment <- experiment2 %>% 
+  subset(experiment2$trial.type == "experiment")
+```
+
 
 1) Pick four subjects and plot their Quantile-Quantile (Q-Q) plots for the residuals of their objective response times (_rt.obj_) based on a model where only intercept is modelled  
-    i. comment on these    
-    ii. does a log-transformation of the response time data improve the Q-Q-plots?  
-2) Now do a partial pooling model modelling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification)  
-    i. which would you include among your random effects and why? (support your choices with relevant measures, taking into account variance explained and number of parameters going into the modelling)  
+    i. comment on these
+```{r}
+# Only intercept model for participant 1
+exp2_exp_ID1 <- exp2_experiment %>% 
+  subset(exp2_experiment$subject == "001")
+model3 <- lm(rt.obj ~ 1, data = exp2_exp_ID1)
+# QQ plot
+sub1 <- ggplot(exp2_exp_ID1, aes(sample = rt.obj)) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles") + ggtitle("Q-Q Plot for subject 1") +
+theme_bw()
+# QQ plot log transformed response time
+sub1log <- ggplot(exp2_exp_ID1, aes(sample = log(rt.obj))) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles", title = "Q-Q Plot for subject 1", subtitle = "with log transformation")+
+theme_bw()
+
+# Only intercept model for participant 2
+exp2_exp_ID2 <- exp2_experiment %>% 
+  subset(exp2_experiment$subject == "002")
+model4 <- lm(rt.obj ~ 1, data = exp2_exp_ID2)
+# QQ plot
+sub2 <- ggplot(exp2_exp_ID2, aes(sample = rt.obj)) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles") + ggtitle("Q-Q Plot for subject 2") +
+theme_bw()
+# QQ plot log transformed response time
+sub2log <- ggplot(exp2_exp_ID2, aes(sample = log(rt.obj))) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles", title = "Q-Q Plot for subject 2", subtitle = "with log transformation")+
+theme_bw()
+
+# Only intercept model for participant 3
+exp2_exp_ID3 <- exp2_experiment %>% 
+  subset(exp2_experiment$subject == "003")
+model5 <- lm(rt.obj ~ 1, data = exp2_exp_ID3)
+# QQ plot
+sub3 <- ggplot(exp2_exp_ID3, aes(sample = rt.obj)) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles") + ggtitle("Q-Q Plot for subject 3") +
+theme_bw()
+# QQ plot log transformed response time
+sub3log <- ggplot(exp2_exp_ID3, aes(sample = log(rt.obj))) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles", title = "Q-Q Plot for subject 3", subtitle = "with log transformation")+
+theme_bw()
+
+# Only intercept model for participant 4
+exp2_exp_ID4 <- exp2_experiment %>% 
+  subset(exp2_experiment$subject == "004")
+model6 <- lm(rt.obj ~ 1, data = exp2_exp_ID4)
+# QQ plot
+sub4 <- ggplot(exp2_exp_ID4, aes(sample = rt.obj)) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles") + ggtitle("Q-Q Plot for subject 4") +
+theme_bw()
+# QQ plot log transformed response time
+sub4log <- ggplot(exp2_exp_ID4, aes(sample = log(rt.obj))) + stat_qq() +
+stat_qq_line(colour = "red") +
+labs(x = "Theoretical quantiles", y = "Sample quantiles", title = "Q-Q Plot for subject 4", subtitle = "with log transformation")+
+theme_bw()
+
+
+library(gridExtra)
+
+grid.arrange(sub1, sub2, sub3, sub4)
+
+grid.arrange(sub1log, sub2log, sub3log, sub4log, sub1, sub2, sub3, sub4)
+```
+
+    ii. does a log-transformation of the response time data improve the Q-Q-plots?
+Yes, it seems like it. The log transformation removes some of the skewness in the data (which is also one of the purposes of transforming the data). To numerically assess how much influence the log-transformation had on the data, we can run a stat.desc analysis on the non-transformed and transformed data (in this case done for participant 1):
+```{r}
+round(pastecs::stat.desc(cbind(rt.obj = exp2_exp_ID1$rt.obj, rt.obj_log = log(exp2_exp_ID1$rt.obj)), basic = FALSE, norm = TRUE), digits = 2)
+```
+To calculate the reduction in skewness, we apply the following formula: (3*(mean-median))/std.dev (source: Larose, D. T., & Larose, C. D. (2014))
+```{r}
+print(skewness <- (3*(0.89-0.84))/0.43)
+
+print(skewness_log <- 3*((-0.21)-(-0.18))/0.45)
+```
+So we went from 0.34 to -0.20 skewness, which is a great deal. We could try other transformations to try to make a better performance but due to the scope of the assignment we won't do this.
+
+
+2) Now do a partial pooling model modelling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification)
+```{r}
+# Partial pooling, with RT dep on task
+model7 <- lmer(rt.obj ~ task + (1| subject), data = exp2_experiment, REML = F)
+```
+
+    i. which would you include among your random effects and why? (support your choices with relevant measures, taking into account variance explained and number of parameters going into the modelling)
+
+First of, I would include a random intercept for subject since each subject has their own baseline. Also multiple measurements per participant violates assumption of independence for normal linear regression and as a consequence causes type 1 errors.
+
+Random slope: We expect different effects for different people
+Random intercept: We expect different baselines
+```{r}
+# Just random intercept
+model8 <- lmer(rt.obj ~ task + (1| subject), data = exp2_experiment, REML = F)
+
+# Random intercept and random slope (singular: overfitting the data)
+model9 <- lmer(rt.obj ~ task + (1 + pas| subject), data = exp2_experiment, REML = F)
+
+# Random intercept and random slope (singular: overfitting the data)
+model10 <- lmer(rt.obj ~ task + (1 + target.contrast| subject), data = exp2_experiment, REML = F)
+
+# Two random intercepts
+model12 <- lmer(rt.obj ~ task + (1 | subject) + (1 | pas), data = exp2_experiment, REML = F)
+
+summary(model8)
+MuMIn::r.squaredGLMM(model8) #R2c = 0.01464871
+```
+
     ii. explain in your own words what your chosen models says about response times between the different tasks  
+We see, that response time is fastest in the pairs condition (1.12 seconds). When going to the quadruplet condition, reaction time decreases with 0.15 seconds and when going to singles task, RT decreases with 0.19 seconds. From the lmer we can't tell if this is a significant effect. In terms of variance explained, the model is pretty shitty with an r-squared of 0.014. 
+
+
 3) Now add _pas_ and its interaction with _task_ to the fixed effects  
     i. how many types of group intercepts (random effects) can you add without ending up with convergence issues or singular fits?  
     ii. create a model by adding random intercepts (without modelling slopes) that results in a singular fit - then use `print(VarCorr(<your.model>), comp='Variance')` to inspect the variance vector - explain why the fit is singular (Hint: read the first paragraph under details in the help for `isSingular`)
-    iii. in your own words - how could you explain why your model would result in a singular fit?  
-    
+    iii. in your own words - how could you explain why your model would result in a singular fit? *singularity: when the model is closing 0 variance = overfitting*.
+
+Factors resulting in singular fit:
+ - avoid fitting overly complex models, such that the variance-covariance matrices can be estimated precisely enough
+ - “keep it maximal”, i.e. fit the most complex model consistent with the experimental design, removing only terms required to allow a non-singular fit
+ - use some form of model selection to choose a model that balances predictive accuracy and overfitting/type I error
+
+```{r}
+model9 <- lmer(rt.obj ~ pas*task + (1| subject), data = exp2_experiment, REML = F)
+# Adding different random effects to see when we reach singularity
+
+```
+
+
 ## Exercise 3
 
 1) Initialise a new data frame, `data.count`. _count_ should indicate the number of times they categorized their experience as _pas_ 1-4 for each _task_. I.e. the data frame would have for subject 1: for task:singles, pas1 was used # times, pas2 was used # times, pas3 was used # times and pas4 was used # times. You would then do the same for task:pairs and task:quadruplet  
