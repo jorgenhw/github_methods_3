@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Libraries in use
 library(pacman)
-p_load(tidyverse, lmer, lme4)
+p_load(tidyverse, lmer, lme4, gridExtra)
 
 ```
 
@@ -205,21 +205,22 @@ for (i in unique(exp2_staircase$subject)) {
   nopoolfun(i)
 }
 
+subjects <- c(1:29)
+plots <- lapply(subjects, FUN=nopoolfun)
+do.call(grid.arrange,plots)
 
 ```
 
 iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_ 
 ```{r}
 # Partial pooling model
-model2 <- glmer(correct ~ target.contrast + (1|subject), data = exp2_staircase, family = binomial(link = logit))
+model2 <- glmer(correct ~ target.contrast + (1 | subject), data = exp2_staircase, family = binomial(link = logit))
 
 # ???? gotta be wrong...
 ggplot(exp2_staircase)+
   geom_point(aes(x = target.contrast, y = fitted(model2), color = subject))+
   geom_line(aes(x = target.contrast, y = fitted(model2))) +
   facet_wrap(~subject)
-
-
 ```
 
 v. in your own words, describe how the partial pooling model allows for a better fit for each subject
