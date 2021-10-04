@@ -218,7 +218,7 @@ model2 <- glmer(correct ~ target.contrast + (1 | subject), data = exp2_staircase
 
 # ???? gotta be wrong...
 ggplot(exp2_staircase)+
-  geom_point(aes(x = target.contrast, y = fitted(model2), color = subject))+
+  geom_point(aes(x = target.contrast, y = correct, color = subject))+
   geom_line(aes(x = target.contrast, y = fitted(model2))) +
   facet_wrap(~subject)
 ```
