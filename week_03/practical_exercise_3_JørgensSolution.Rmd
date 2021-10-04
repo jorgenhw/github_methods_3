@@ -164,16 +164,48 @@ levels(exp2_staircase$correct)
 #Printing
 summary(model1)
 
+exp2_staircase$fitmodel1 <- fitted(model1)
+
+
 # Does this make sense?
 ggplot(exp2_staircase)+
   geom_point(aes(x = target.contrast, y = fitted(model1), color = subject))+
   geom_line(aes(x = target.contrast, y = fitted(model1))) +
   facet_wrap(~subject)
 
-# Alternatively
-ggplot(exp2_staircase)+
-  geom_line(aes(x = target.contrast, y = fitted(model1))) +
-  facet_wrap(~subject)
+# Complete pooling plot
+ggplot(exp2_staircase, (aes(x = target.contrast, y = correct, color= subject)))+
+  geom_point()+
+  geom_line(aes(target.contrast, fitted(model1))) +
+  facet_wrap(.~subject)+ 
+  labs(title = "Complete Pooling model: correct~target.contrast") +
+  theme_bw()
+
+```
+
+```{R}
+nopoolfun <- function(i){
+  dat <- exp2_staircase[which(exp2_staircase$subject == i),]
+  model <- glm(correct ~ target.contrast, family = 'binomial', data=dat)
+  fitted <- model$fitted.values
+  plot_dat <- data.frame(cbind(fitted,'target.contrast' = dat$target.contrast))
+plot <- ggplot(plot_dat, aes(x = target.contrast, y = fitted)) +
+  geom_point()+
+  geom_line(aes(x = target.contrast, y = fitted))+
+  xlab('Target Contrast')+
+  ylim(c(0,1))+
+  theme_minimal()
+print(plot)
+}
+
+nopoolfun("001")
+
+# Running the function for each participant
+for (i in unique(exp2_staircase$subject)) {
+  nopoolfun(i)
+}
+
+
 ```
 
 iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_ 
@@ -194,8 +226,6 @@ v. in your own words, describe how the partial pooling model allows for a better
 
 
 
-
-
 ## Exercise 2
 
 Now we __only__ look at the _experiment_ trials (_trial.type_)  
@@ -205,7 +235,7 @@ exp2_experiment <- experiment2 %>%
 ```
 
 
-1) Pick four subjects and plot their Quantile-Quantile (Q-Q) plots for the residuals of their objective response times (_rt.obj_) based on a model where only intercept is modelled  
+1) Pick four subjects and plot their Quantile-Quantile (Q-Q) plots for the residuals of their objective response times (_rt.obj_) based on a model where only intercept is modelled
     i. comment on these
 ```{r}
 # Only intercept model for participant 1
@@ -293,7 +323,7 @@ So we went from 0.34 to -0.20 skewness, which is a great deal. We could try othe
 2) Now do a partial pooling model modelling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification)
 ```{r}
 # Partial pooling, with RT dep on task
-model7 <- lmer(rt.obj ~ task + (1| subject), data = exp2_experiment, REML = F)
+model7 <- lmer(rt.obj ~ task + (1| subject), data = exp2_experiment, REML = FALSE)
 ```
 
     i. which would you include among your random effects and why? (support your choices with relevant measures, taking into account variance explained and number of parameters going into the modelling)
@@ -310,17 +340,30 @@ model8 <- lmer(rt.obj ~ task + (1| subject), data = exp2_experiment, REML = F)
 model9 <- lmer(rt.obj ~ task + (1 + pas| subject), data = exp2_experiment, REML = F)
 
 # Random intercept and random slope (singular: overfitting the data)
-model10 <- lmer(rt.obj ~ task + (1 + target.contrast| subject), data = exp2_experiment, REML = F)
+model10 <- lmer(rt.obj ~ task + (1| subject), data = exp2_experiment, REML = F)
 
 # Two random intercepts
 model12 <- lmer(rt.obj ~ task + (1 | subject) + (1 | pas), data = exp2_experiment, REML = F)
 
+# Three random intercepts
+model14 <- lmer(rt.obj ~ task + (1 | subject) + (1 | trial) + (1 | task), data = exp2_experiment, REML = F)
+
+# 
+model15 <- lmer(rt.obj ~ task + (1 | subject) + (1 | trial) + (1 | task), data = exp2_experiment, REML = F)
+
+#
+model16 <- lmer(rt.obj ~ task + (1 | subject) + (1 | trial) + (1 | task), data = exp2_experiment, REML = F)
+
+
+
 summary(model8)
 MuMIn::r.squaredGLMM(model8) #R2c = 0.01464871
+
+MuMIn::r.squaredGLMM(model13) #R2c = 0.01464871
 ```
 
     ii. explain in your own words what your chosen models says about response times between the different tasks  
-We see, that response time is fastest in the pairs condition (1.12 seconds). When going to the quadruplet condition, reaction time decreases with 0.15 seconds and when going to singles task, RT decreases with 0.19 seconds. From the lmer we can't tell if this is a significant effect. In terms of variance explained, the model is pretty shitty with an r-squared of 0.014. 
+We see, that response time is fastest in the pairs condition (1.12 seconds). When going to the quadruplet condition, reaction time decreases with 0.15 seconds and when going to singles task, RT decreases with 0.19 seconds. From the lmer we can't tell if this is a significant effect. In terms of variance explained, the model is pretty shitty with an r-squared of 0.014.
 
 
 3) Now add _pas_ and its interaction with _task_ to the fixed effects  
