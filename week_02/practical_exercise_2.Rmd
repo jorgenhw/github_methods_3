@@ -49,6 +49,7 @@ The following exercise will investigate the 'politeness dataset' from a study by
 
 The following are the variables involved in the study:
 *subject*: Participants involved in the experiment
+
 *gender*: Sex is represented as “F” and “M”
 *scenario*: 
 *attitude*: The attitude of the message, to which the participants had to respond: Either informal (inf) or polite (pol).
@@ -200,9 +201,18 @@ qqline(resid(model_1))
 plot(model4)
 
 ## qq-plot of single-level-model
+par(mfrow=c(1,))
 qqnorm(resid(model4))
 qqline(resid(model4))
 
+#show qqplots tgether
+par(mfrow=c(1,2))
+qqnorm(resid(model_1))
+qqline(resid(model_1))
+qqnorm(resid(model4))
+qqline(resid(model4))
+
+par(mfrow=c())
 ```
 
 
@@ -253,6 +263,9 @@ summary(model6)
 ```
 
 The interaction term in the model says that Korean men's pitch is 5.885hz higher than women's (when adjusted for gender difference) meaning that men has a higher pitch when in a polite situation than women.
+
+*Explainer on class*
+
 
 *Explainer for myself*: 
 Pitch for kvinder når informal er gennemsnitligt 252.895 hz

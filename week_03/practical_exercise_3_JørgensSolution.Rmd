@@ -180,7 +180,6 @@ ggplot(exp2_staircase, (aes(x = target.contrast, y = correct, color= subject)))+
   facet_wrap(.~subject)+ 
   labs(title = "Complete Pooling model: correct~target.contrast") +
   theme_bw()
-
 ```
 
 ```{R}
@@ -189,7 +188,7 @@ nopoolfun <- function(i){
   model <- glm(correct ~ target.contrast, family = 'binomial', data=dat)
   fitted <- model$fitted.values
   plot_dat <- data.frame(cbind(fitted,'target.contrast' = dat$target.contrast))
-plot <- ggplot(plot_dat, aes(x = target.contrast, y = fitted)) +
+plot <- ggplot(plot_dat, aes(x = target.contrast, y = fitted)) + #fitted
   geom_point()+
   geom_line(aes(x = target.contrast, y = fitted))+
   xlab('Target Contrast')+
@@ -198,7 +197,7 @@ plot <- ggplot(plot_dat, aes(x = target.contrast, y = fitted)) +
 print(plot)
 }
 
-nopoolfun("001")
+nopoolfun("023")
 
 # Running the function for each participant
 for (i in unique(exp2_staircase$subject)) {
@@ -210,6 +209,29 @@ plots <- lapply(subjects, FUN=nopoolfun)
 do.call(grid.arrange,plots)
 
 ```
+
+### A third approach
+```{r}
+# Model with subject as fixed effect (and thus no pooling)
+modelx <- glm(correct ~ target.contrast + subject, data = exp2_staircase, family = binomial(link = logit))
+
+modelxx <- glm(correct ~ target.contrast*subject, data = exp2_staircase, family = binomial(link = logit))
+
+exp2_staircase %>%
+    ggplot(aes(target.contrast, as.factor(correct), color = correct)) +
+    geom_point() +
+    geom_line(aes(target.contrast, fitted(modelxx),
+        linetype = "fitted values"), inherit.aes = FALSE) +
+    scale_linetype_manual(name = "single-level model", values = c("dashed")) +
+    facet_wrap(~subject) +
+    labs(title = "Correct answers by target contrast per participant",
+        subtitle = "With single-level model fitted values (no-pooling)",
+        color = "subject correct") +
+    ylab("Correct (probability)") +
+    xlab("target contrast")
+
+```
+
 
 iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_ 
 ```{r}
