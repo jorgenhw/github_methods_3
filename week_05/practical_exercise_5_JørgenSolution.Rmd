@@ -137,8 +137,7 @@ fun2(mod1_comPool, df$correct)
 # Comparing my log likelihood function with the logLik function
 print(comp_mods <- tibble(logLik_function=logLik(mod1_comPool),myFunction = fun2(mod1_comPool, df$correct)))
 ```
-sandsynligheden for de værdier du har, i præcis den samme rækkefølge. The likelihood functions calculates the probability for x times the probability for y again and again and again. This returns a lower and lower number, which ends out being so close to 0 as possible. This is also the reason why computers with limited precision is not preferable, since it requires great precision to arrive at the exact number.
-
+sandsynligheden for de værdier du har, i præcis den samme rækkefølge. 
 
   iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)
 ```{r}
