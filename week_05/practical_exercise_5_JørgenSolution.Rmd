@@ -101,6 +101,16 @@ summary(mod1_parPool <- glmer(correct ~ target.frames + (1 | subject), data = df
 
 # Complete pooling
 summary(mod1_comPool <- glm(correct ~ target.frames, data = df, family = binomial(link=logit)))
+
+df$target.frames[1:20,]
+
+colnames(df)
+
+which(nrowdf)
+
+view(df[19853,])
+
+
 ```
 
  i. the likelihood-function for logistic regression is: $L(p)={\displaystyle\prod_{i=1}^Np^{y_i}(1-p)^{(1-y_i)}}$ (Remember the probability mass function for the Bernoulli Distribution). Create a function that calculates the likelihood.
@@ -110,10 +120,7 @@ summary(mod1_comPool <- glm(correct ~ target.frames, data = df, family = binomia
 fun1 <- function(model, y){
   fitted <- model$fitted
   y <- y
-  g.inv <- function(x) {
-    exp(x / (1-exp(x)))
-    }
-  return(prod(((g.inv(fitted)^y))*(1 - g.inv(fitted))^1-df$correct))
+  return(prod(((fitted^y))*(1 - fitted)^(1-df$correct)))
 }
 ```
 
@@ -122,9 +129,9 @@ fun1 <- function(model, y){
 ```{R}
 # Creating log likelihood function
 fun2 <- function(model, y){
-  fitted <- model$fitted
+  fitted <- fitted.values(model)
   y <- y
-  return(sum((y * log(fitted))+(1-y) * log(1-fitted)))
+  return(sum(y * log(fitted)+(1-y) * log(1-fitted)))
 }
 ```
  
@@ -137,26 +144,57 @@ fun2(mod1_comPool, df$correct)
 # Comparing my log likelihood function with the logLik function
 print(comp_mods <- tibble(logLik_function=logLik(mod1_comPool),myFunction = fun2(mod1_comPool, df$correct)))
 ```
-sandsynligheden for de værdier du har, i præcis den samme rækkefølge. 
+sandsynligheden for de værdier du har, i præcis den samme rækkefølge.
+
 
   iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)
 ```{r}
-tibble(logLikParMod = logLik(mod1_parPool), fun2(mod1_parPool, df$correct))
-
-df$correct
-
-fun2(mod1)
-
+print(diff <- tibble(logLikParMod = logLik(mod1_parPool), fun2(mod1_parPool, df$correct)))
 ```
-
+The log-likelihood is (10622-10566) 56 off.
     
 
-2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the null model, `glm(correct ~ 1, 'binomial', data)`, then add subject-level intercepts, then add a group-level effect of _target.frames_ and finally add subject-level slopes for _target.frames_. Also assess whether or not a correlation between the subject-level slopes and the subject-level intercepts should be included.
-    i. write a short methods section and a results section where you indicate which model you chose and the statistics relevant for that choice. Include a plot of the estimated group-level function with `xlim=c(0, 8)` that includes the estimated subject-specific functions.
-    ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)  
+2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the null model, `glm(correct ~ 1, 'binomial', data)`, 
+then add subject-level intercepts, 
+then add a group-level effect of _target.frames_ and 
+finally add subject-level slopes for _target.frames_. 
+Also assess whether or not a correlation between the subject-level slopes and the subject-level intercepts should be included.
+```{r}
+df$correct <- factor(df$correct)
+
+null <- glm(correct ~ 1, df, family = binomial(link = logit))
+model_2 <- glmer(correct ~ 1 + (1 | subject), df, family = binomial(link = logit))
+model_3 <- glmer(correct ~ target.frames + (1| subject), data = df, family = binomial(link = logit))
+model_4 <- glmer(correct ~ target.frames + (target.frames | subject), data = df, family = binomial(link = logit))
+model_5 <- glmer(correct ~ target.frames + (target.frames || subject), data = df, family = binomial(link = logit))
+
+# Comparing models
+anova(model_5,null,model_2, model_3, model_4)
+```
+
+  i. write a short methods section and a results section where you indicate which model you chose and the statistics relevant for that choice. Include a plot of the estimated group-level function with `xlim=c(0, 8)` that includes the estimated subject-specific functions.
+*According to an anova test the model with the lowest log likelihood ratio is model 4 (logLik(-10449).*
+
+  ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)  
+
+
 3) Now add _pas_ to the group-level effects - if a log-likelihood ratio test justifies this, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this  
-    i. if your model doesn't converge, try a different optimizer  
-    ii. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?  
+  i. if your model doesn't converge, try a different optimizer  
+  ii. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?
+```{r}
+model_6 <- glmer(correct ~ target.frames + pas + (target.frames | subject), data = df, family = binomial(link = logit))
+
+model_7 <- glmer(correct ~ target.frames*pas + (target.frames | subject), data = df, family = binomial(link = logit))
+
+# Comparing
+anova(model_6,null, model_7)
+
+# Plotting group level effects (interaction effects)
+interactions::interact_plot(model = model_7, pred = target.frames, modx = pas)
+
+
+```
+    
 
 # EXERCISE 6 - Test linear hypotheses
 
