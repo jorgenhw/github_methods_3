@@ -82,7 +82,7 @@ table(df$target.contrast)
 
 In experiment 1, each participant had the same contrast level on the cue whereas in experiment 2, the staircase round created an individual contrast level for each participant. This is also what we see in the data
 
-As for target.frames, in experiment two, all participants saw the target frame for 3 frames, whereas in experiment 1, participants saw the target for 1-6 frames, equally distributed over participants.
+As for target.frames, in experiment two, all participants saw the target frame for 3 frames, whereas in experiment 1, participants saw the target for 1-6 frames, equally distributed over participants (shown in the following histogram).
 
 ```{r}
 hist(df$target.frames)
@@ -93,31 +93,23 @@ hist(df$target.frames)
 
 
 1) Do logistic regression - _correct_ as the dependent variable and _target.frames_ as the independent variable. (Make sure that you understand what _target.frames_ encode). Create two models - a complete-pooled model and a partial-pooling model. The partial-pooling model should include a subject-specific intercept.
-*Creation of models*
+
+Creation of models
 ```{r}
-##### MODELS #####
-# Partial pooling
-summary(mod1_parPool <- glmer(correct ~ target.frames + (1 | subject), data = df, family = binomial(link=logit)))
-
-# Complete pooling
-summary(mod1_comPool <- glm(correct ~ target.frames, data = df, family = binomial(link=logit)))
-
-df$target.frames[1:20,]
-
-colnames(df)
-
-which(nrowdf)
-
-view(df[19853,])
-
-
+# Partial pooling model
+mod1_parPool <- glmer(correct ~ target.frames + (1 | subject), data = df, family = binomial(link=logit))
+summary(mod1_parPool)
+# Complete pooling nodel
+mod1_comPool <- glm(correct ~ target.frames, data = df, family = binomial(link=logit))
+summary(mod1_comPool)
 ```
 
  i. the likelihood-function for logistic regression is: $L(p)={\displaystyle\prod_{i=1}^Np^{y_i}(1-p)^{(1-y_i)}}$ (Remember the probability mass function for the Bernoulli Distribution). Create a function that calculates the likelihood.
-*likelihood-function*
+
+Likelihood-function
 ```{R}
 # Creating a likelihood-function
-fun1 <- function(model, y){
+likFunction <- function(model, y){
   fitted <- model$fitted
   y <- y
   return(prod(((fitted^y))*(1 - fitted)^(1-df$correct)))
@@ -125,16 +117,17 @@ fun1 <- function(model, y){
 ```
 
   ii. the log-likelihood-function for logistic regression is: $l(p) = {\displaystyle\sum_{i=1}^N}[y_i\ln{p}+(1-y_i)\ln{(1-p)}$. Create a function that calculates the log-likelihood  
-*log likelihood function*
+
+Log likelihood function
 ```{R}
 # Creating log likelihood function
-fun2 <- function(model, y){
+logLikFunction <- function(model, y){
   fitted <- fitted.values(model)
   y <- y
   return(sum(y * log(fitted)+(1-y) * log(1-fitted)))
 }
 ```
- 
+
   iii. apply both functions to the pooling model you just created. Make sure that the log-likelihood matches what is returned from the _logLik_ function for the pooled model. Does the likelihood-function return a value that is surprising? Why is the log-likelihood preferable when working with computers with limited precision?
 ```{r}
 # Applying functions to models
@@ -191,36 +184,58 @@ anova(model_6,null, model_7)
 
 # Plotting group level effects (interaction effects)
 interactions::interact_plot(model = model_7, pred = target.frames, modx = pas)
-
-
 ```
     
 
 # EXERCISE 6 - Test linear hypotheses
 
-In this section we are going to test different hypotheses. We assume that we have already proved that more objective evidence (longer duration of stimuli) is sufficient to increase accuracy in and of itself and that more subjective evidence (higher PAS ratings) is also sufficient to increase accuracy in and of itself.  
+In this section we are going to test different hypotheses. We assume that we have already proved that more objective evidence (longer duration of stimuli) is sufficient to increase accuracy in and of itself and that more subjective evidence (higher PAS ratings) is also sufficient to increase accuracy in and of itself.
 We want to test a hypothesis for each of the three neighbouring differences in PAS, i.e. the difference between 2 and 1, the difference between 3 and 2 and the difference between 4 and 3. More specifically, we want to test the hypothesis that accuracy increases faster with objective evidence if subjective evidence is higher at the same time, i.e. we want to test for an interaction.  
 
 1) Fit a model based on the following formula: `correct ~ pas * target.frames + (target.frames | subject))`
-    i. First, use `summary` (yes, you are allowed to!) to argue that accuracy increases faster with objective evidence for PAS 2 than for PAS 1. 
+```{r}
+model_8 <- glmer(correct ~ pas*target.frames + (target.frames | subject), data = df, family = binomial(link = logit))
+```
+
+  i. First, use `summary` (yes, you are allowed to!) to argue that accuracy increases faster with objective evidence for PAS 2 than for PAS 1. 
+```{r}
+summary(model_8)
+```
+
+  
 2) `summary` won't allow you to test whether accuracy increases faster with objective evidence for PAS 3 than for PAS 2 (unless you use `relevel`, which you are not allowed to in this exercise). Instead, we'll be using the function `glht` from the `multcomp` package
     i. To redo the test in 6.1.i, you can create a _contrast_ vector. This vector will have the length of the number of estimated group-level effects and any specific contrast you can think of can be specified using this. For redoing the test from 6.1.i, the code snippet below will do
-    ii. Now test the hypothesis that accuracy increases faster with objective evidence for PAS 3 than for PAS 2.
-    iii. Also test the hypothesis that accuracy increases faster with objective evidence for PAS 4 than for PAS 3
-3) Finally, test that whether the difference between PAS 2 and 1 (tested in 6.1.i) is greater than the difference between PAS 4 and 3 (tested in 6.2.iii)
+```{r}
+# Loading library
+p_load(multcomp)
 
-### Snippet for 6.2.i
-```{r, eval=FALSE}
 ## testing whether PAS 2 is different from PAS 1
 contrast.vector <- matrix(c(0, 0, 0, 0, 0, 1, 0, 0), nrow=1)
-gh <- glht(pas.intact.tf.ranslopeint.with.corr, contrast.vector)
+gh <- glht(model_8, contrast.vector)
 print(summary(gh))
 ## as another example, we could also test whether there is a difference in
 ## intercepts between PAS 2 and PAS 3
 contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
-gh <- glht(pas.intact.tf.ranslopeint.with.corr, contrast.vector)
+gh <- glht(model_8, contrast.vector)
 print(summary(gh))
 ```
+
+  ii. Now test the hypothesis that accuracy increases faster with objective evidence for PAS 3 than for PAS 2.
+```{r}
+
+```
+
+  iii. Also test the hypothesis that accuracy increases faster with objective evidence for PAS 4 than for PAS 3
+```{r}
+
+```
+
+3) Finally, test that whether the difference between PAS 2 and 1 (tested in 6.1.i) is greater than the difference between PAS 4 and 3 (tested in 6.2.iii)
+```{r}
+
+```
+
+
 
 # EXERCISE 7 - Estimate psychometric functions for the Perceptual Awareness Scale and evaluate them  
 
