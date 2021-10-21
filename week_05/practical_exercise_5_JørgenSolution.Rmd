@@ -131,20 +131,20 @@ logLikFunction <- function(model, y){
   iii. apply both functions to the pooling model you just created. Make sure that the log-likelihood matches what is returned from the _logLik_ function for the pooled model. Does the likelihood-function return a value that is surprising? Why is the log-likelihood preferable when working with computers with limited precision?
 ```{r}
 # Applying functions to models
-fun1(mod1_comPool, df$correct)
-fun2(mod1_comPool, df$correct)
+likFunction(mod1_comPool, df$correct)
+logLikFunction(mod1_comPool, df$correct)
 
-# Comparing my log likelihood function with the logLik function
-print(comp_mods <- tibble(logLik_function=logLik(mod1_comPool),myFunction = fun2(mod1_comPool, df$correct)))
+# Comparing my log likelihood function with the logLik function from 'rstanarm package'
+print(comp_mods <- tibble(logLik_function=logLik(mod1_comPool),myFunction = logLikFunction(mod1_comPool, df$correct)))
 ```
-sandsynligheden for de værdier du har, i præcis den samme rækkefølge.
+The reason why the likelihood function outputs 0 is, that it calculates the probability of getting the exact same result (in the same order etc.) as you just did. The likelihood for this is very, very small.
 
 
   iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)
 ```{r}
-print(diff <- tibble(logLikParMod = logLik(mod1_parPool), fun2(mod1_parPool, df$correct)))
+print(diff <- tibble(logLik_built_in = logLik(mod1_parPool),logLikelihood_function = logLikFunction(mod1_parPool, df$correct), difference = logLik(mod1_parPool)-logLikFunction(mod1_parPool, df$correct)))
 ```
-The log-likelihood is (10622-10566) 56 off.
+The log-likelihood is (10622-10566) 56.5 off.
     
 
 2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the null model, `glm(correct ~ 1, 'binomial', data)`, 
@@ -163,45 +163,75 @@ model_5 <- glmer(correct ~ target.frames + (target.frames || subject), data = df
 
 # Comparing models
 anova(model_5,null,model_2, model_3, model_4)
+
+summary(model_4)
+
+rsq(model_4)
 ```
 
   i. write a short methods section and a results section where you indicate which model you chose and the statistics relevant for that choice. Include a plot of the estimated group-level function with `xlim=c(0, 8)` that includes the estimated subject-specific functions.
-*According to an anova test the model with the lowest log likelihood ratio is model 4 (logLik(-10449).*
+  
+*Report*
+Results of the anova test on complexity vs fit of the models indicated that correctness explained by target.frame with random intercept for subject and random slope by target.frame was the best model (logLik = -10449). 
+In model 4 we used R (R Core Team, 2019) and glmer to perform a linear mixed effects analysis of the relationship between correct/incorrect answers and how many frames the target was shown for. As fixed effects, we entered the number of frames the participants saw the stimuli. As random effects, we had intercepts for subject, as well as by-subject random slopes for the effect of the number of frames the participant saw.
+The model was built using the following syntax:
 
+    correct ~ target.frames + (target.frames | subject)
+    
+Correct/incorrect has been found to significantly be modulated by the number of frames stimuli was shown, β = 0.83, SE = 0.044, < = 18.8, p < .001”
+
+*???????????????????*
   ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)  
 
 
-3) Now add _pas_ to the group-level effects - if a log-likelihood ratio test justifies this, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this  
-  i. if your model doesn't converge, try a different optimizer  
-  ii. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?
+3) Now add _pas_ to the group-level effects, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this  
+  i. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?
 ```{r}
 model_6 <- glmer(correct ~ target.frames + pas + (target.frames | subject), data = df, family = binomial(link = logit))
 
 model_7 <- glmer(correct ~ target.frames*pas + (target.frames | subject), data = df, family = binomial(link = logit))
+summary(model_7)
 
 # Comparing
-anova(model_6,null, model_7)
+anova(model_5,null,model_2, model_3, model_4,model_6, model_7)
 
 # Plotting group level effects (interaction effects)
 interactions::interact_plot(model = model_7, pred = target.frames, modx = pas)
+
+#another way...
+library(effects)
+plot(allEffects(model_7), multiline=TRUE, ci.style="bars")
 ```
+The log likelihood ratio test justifies adding the interaction between pas and target frames. Adding the interaction between pas rating and target frames increased the chi square by 1413.5 points from model 4 (the initially selected model).
+
+The current best performing model (measured in accordance to the likelihood ratio test) is mode 7, which takes the following parameters:
     
+    correct ~ target.frames*pas + (target.frames | subject)
+    
+
+    
+
+
 
 # EXERCISE 6 - Test linear hypotheses
 
 In this section we are going to test different hypotheses. We assume that we have already proved that more objective evidence (longer duration of stimuli) is sufficient to increase accuracy in and of itself and that more subjective evidence (higher PAS ratings) is also sufficient to increase accuracy in and of itself.
+
 We want to test a hypothesis for each of the three neighbouring differences in PAS, i.e. the difference between 2 and 1, the difference between 3 and 2 and the difference between 4 and 3. More specifically, we want to test the hypothesis that accuracy increases faster with objective evidence if subjective evidence is higher at the same time, i.e. we want to test for an interaction.  
 
 1) Fit a model based on the following formula: `correct ~ pas * target.frames + (target.frames | subject))`
 ```{r}
-model_8 <- glmer(correct ~ pas*target.frames + (target.frames | subject), data = df, family = binomial(link = logit))
+model_8 <- glmer(correct ~ pas * target.frames + (target.frames | subject), data = df, family = binomial(link = logit))
 ```
 
   i. First, use `summary` (yes, you are allowed to!) to argue that accuracy increases faster with objective evidence for PAS 2 than for PAS 1. 
 ```{r}
 summary(model_8)
+
+table(df$correct)
 ```
 
+1=correct
   
 2) `summary` won't allow you to test whether accuracy increases faster with objective evidence for PAS 3 than for PAS 2 (unless you use `relevel`, which you are not allowed to in this exercise). Instead, we'll be using the function `glht` from the `multcomp` package
     i. To redo the test in 6.1.i, you can create a _contrast_ vector. This vector will have the length of the number of estimated group-level effects and any specific contrast you can think of can be specified using this. For redoing the test from 6.1.i, the code snippet below will do
@@ -295,4 +325,5 @@ print(head(y.hat.linear - mod1_comPool$linear.predictors))
 plot(df$target.frames,y.hat.linear)
 ####################################################################
 ```
+
 
