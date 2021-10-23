@@ -27,18 +27,17 @@ REMEMBER: This is part 2 of Assignment 2 and will be part of your final portfoli
 # EXERCISE 4 - Download and organise the data from experiment 1
   
 1) Put the data from all subjects into a single data frame - note that some of the subjects do not have the _seed_ variable. For these subjects, add this variable and make in _NA_ for all observations. (The _seed_ variable will not be part of the analysis and is not an experimental variable)  
-    i. Factorise the variables that need factorising  
-    ii. Remove the practice trials from the dataset (see the _trial.type_ variable)  
-    iii. Create a _correct_ variable  
-    iv. Describe how the _target.contrast_ and _target.frames_ variables differ compared to the data from part 1 of this assignment  
 
 Importing data
 ```{r}
 df <- list.files(path = "data",     # Identify all csv files in folder
                        pattern = "*.csv", full.names = TRUE) %>% 
-  lapply(read_csv) %>%                                            # Store all files in list
+  lapply(read_csv) %>%                        
   bind_rows
+```
 
+  i. Factorise the variables that need factorising
+```{r}
 # Factorizing cue
 df$cue <- as.factor(df$cue)
 # Factorizing subject
@@ -53,37 +52,29 @@ df$trial <- as.factor(df$trial)
 df$trial <- as.factor(df$trial.type)
 # Factorizing pas
 df$pas <- as.factor(df$pas)
+```
+See assignment 3 for arguments as to which variables should be factorized.
 
+  ii. Remove the practice trials from the dataset (see the _trial.type_ variable)  
+```{r}
 # Removing practice trials
 df <- df %>% 
   subset(df$trial.type == "experiment")
+```
 
-# Making correct variable
+  iii. Create a _correct_ variable
+```{r}
 df$correct <- (ifelse(df$obj.resp == "e" & df$target.type == "even", "1", 
                               ifelse(df$obj.resp == "o" & df$target.type == "odd", "1",
                                      ifelse(df$obj.resp == "o" & df$target.type == "even", "0",
                                             ifelse(df$obj.resp == "e" & df$target.type == "odd", "0", NA)))))
 df$correct <- as.numeric(df$correct)
-
-# Describe how the _target.contrast_ and _target.frames_ variables differ compared to the data from part 1 of this assignment  
-unique(experiment2$target.frames)
-unique(experiment2$target.contrast)
-
-unique(df$target.frames)
-unique(df$target.contrast)
-
-# tables
-table(experiment2$target.frames)
-table(experiment2$target.contrast)
-
-table(df$target.frames)
-table(df$target.contrast)
 ```
 
-In experiment 1, each participant had the same contrast level on the cue whereas in experiment 2, the staircase round created an individual contrast level for each participant. This is also what we see in the data
+  iv. Describe how the _target.contrast_ and _target.frames_ variables differ compared to the data from part 1 of this assignment  
+In experiment 1, each participant had the same contrast level on the target cue whereas in experiment 2, the staircase round created an individual contrast level for each participant. This is also what we see in the data.
 
 As for target.frames, in experiment two, all participants saw the target frame for 3 frames, whereas in experiment 1, participants saw the target for 1-6 frames, equally distributed over participants (shown in the following histogram).
-
 ```{r}
 hist(df$target.frames)
 ```
@@ -137,80 +128,127 @@ logLikFunction(mod1_comPool, df$correct)
 # Comparing my log likelihood function with the logLik function from 'rstanarm package'
 print(comp_mods <- tibble(logLik_function=logLik(mod1_comPool),myFunction = logLikFunction(mod1_comPool, df$correct)))
 ```
-The reason why the likelihood function outputs 0 is, that it calculates the probability of getting the exact same result (in the same order etc.) as you just did. The likelihood for this is very, very small.
+As can be seen from the comp_mods dataframe, my log likelihood function returns the same value as the built-in logLik function.
+
+The reason why the likelihood function outputs 0 is, that it calculates the probability of getting the exact same result (with the y's being in the same order etc.) as you just did. The likelihood for this is very, very small. If my computer was more precise it would have calculated the exact value which is in fact >0. This is one of the reasons for why we use the log likelihood: It outputs a bigger number which we can actually display and use for further comparison. 
 
 
-  iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)
+  iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function
 ```{r}
 print(diff <- tibble(logLik_built_in = logLik(mod1_parPool),logLikelihood_function = logLikFunction(mod1_parPool, df$correct), difference = logLik(mod1_parPool)-logLikFunction(mod1_parPool, df$correct)))
 ```
-The log-likelihood is (10622-10566) 56.5 off.
-    
+The log-likelihood is (10622-10566) 56.5 off. One explanation could be, that my model is not taking into consideration that the model is multilevel. The logLik function probably takes this into account.
 
-2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the null model, `glm(correct ~ 1, 'binomial', data)`, 
+
+
+2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the 
+
+null model, `glm(correct ~ 1, 'binomial', data)`, 
 then add subject-level intercepts, 
 then add a group-level effect of _target.frames_ and 
 finally add subject-level slopes for _target.frames_. 
+
 Also assess whether or not a correlation between the subject-level slopes and the subject-level intercepts should be included.
-```{r}
-df$correct <- factor(df$correct)
-
-null <- glm(correct ~ 1, df, family = binomial(link = logit))
-model_2 <- glmer(correct ~ 1 + (1 | subject), df, family = binomial(link = logit))
-model_3 <- glmer(correct ~ target.frames + (1| subject), data = df, family = binomial(link = logit))
-model_4 <- glmer(correct ~ target.frames + (target.frames | subject), data = df, family = binomial(link = logit))
-model_5 <- glmer(correct ~ target.frames + (target.frames || subject), data = df, family = binomial(link = logit))
-
-# Comparing models
-anova(model_5,null,model_2, model_3, model_4)
-
-summary(model_4)
-
-rsq(model_4)
-```
 
   i. write a short methods section and a results section where you indicate which model you chose and the statistics relevant for that choice. Include a plot of the estimated group-level function with `xlim=c(0, 8)` that includes the estimated subject-specific functions.
   
-*Report*
-Results of the anova test on complexity vs fit of the models indicated that correctness explained by target.frame with random intercept for subject and random slope by target.frame was the best model (logLik = -10449). 
-In model 4 we used R (R Core Team, 2019) and glmer to perform a linear mixed effects analysis of the relationship between correct/incorrect answers and how many frames the target was shown for. As fixed effects, we entered the number of frames the participants saw the stimuli. As random effects, we had intercepts for subject, as well as by-subject random slopes for the effect of the number of frames the participant saw.
+## Report
+
+#### Participants
+29 participants, 18 women and 11 men, with normal or corrected-to-normal vision, provided informed written consent. The sample size of 29 was chosen since it is twice the sample size of previous studies central to this experiment. Doubling the sample size when doing replicate experiments is vital to get reliable results. 
+
+#### Stimuli and procedure
+Participants were seated in front of a screen explaining and showing the experiment. The procedure was as follows: Participants were to report if a target number(s) which they saw for a varying amount of time, was either an odd or even number. Before seeing the target stimuli, the participants would get a cue of either 2, 4 or 8 numbers, divided in half even/odd numbers. The target stimuli would always be among the 'cue numbers'. The difficulty of the experiment was controlled by the duration of which the participants saw the target stimuli (1-6 frames) and how vivid the target occurred (its level of contrast). After each trial, participants were asked to rate from 1-4 how visible the target occurred to them, 1 being very unclear and 4 being very clear (inspired by the PAS-scale). 
+
+#### Analysis
+In order to predict the rate of success (correct responses), we have built 5 different mixed effects models with random effects and compared them using the log likelihood of each model. This was done with the built-in function of R, anova().
+```{r}
+# Null model necessary for comparison
+null <- glm(correct ~ 1, df, family = binomial(link = logit))
+# Model with subject-level intercepts
+model_2 <- glmer(correct ~ 1 + (1 | subject), df, family = binomial(link = logit))
+# Adding group-level effect of _target.frames_
+model_3 <- glmer(correct ~ 1 + target.frames + (1| subject), data = df, family = binomial(link = logit))
+# Adding subject-level slopes for _target.frames_
+model_4 <- glmer(correct ~ 1 + target.frames + (target.frames | subject), data = df, family = binomial(link = logit))
+# Adding a model with a correlation between the subject-level slopes and the subject-level intercepts
+model_5 <- glmer(correct ~ 1 + target.frames + (target.frames || subject), data = df, family = binomial(link = logit))
+
+# Comparing models
+anova(model_2,null, model_3, model_4,model_5)
+```
+
+#### Results and discussion
+Results from the anova test indicated that correctness explained by target.frame with random intercept for subject and random slope by target.frame was the best performing model, having the lowest log likelihood compared to the other models. 
+
+In creating model 4 we used R (R Core Team, 2019) and glmer to perform a linear mixed effects analysis of the relationship between correct/incorrect answers and how many frames the target was shown for. As fixed effects, we entered the number of frames the participants saw the stimuli. As random effects, we had intercepts for subject, as well as by-subject random slopes for the effect of the number of frames the participant saw.
 The model was built using the following syntax:
 
     correct ~ target.frames + (target.frames | subject)
     
-Correct/incorrect has been found to significantly be modulated by the number of frames stimuli was shown, β = 0.83, SE = 0.044, < = 18.8, p < .001”
+Correct/incorrect has been found to significantly be modulated by the number of frames stimuli was shown, $\beta_0 = -1.09 (SE = 0.059, p < .001) $ & $\beta_1 = 0.83 (SE = 0.044, p < .001)$.
 
-*???????????????????*
-  ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)  
+Furthermore we have made a plot showing the estimated group-level (red lines) function with and which also includes the estimated subject-specific (blue lines) functions. This plot is showing that the plot might not be the best fit for subject 24. When comparing the mean accuracy of subject 24 (0.56) with the mean accuracy of all participants (0.77), it seems as if subject 24 did a really bad job. Even when there was target variable was shown for 6 frames, subject 24 had an accuracy of only 0.69 against 0.966 of all the other participants. A one-sample t-test confirms that the difference in accuracy between subject 24 and the rest is a statistical significant with a theoretical value of .5:  $t(873) = 4.026, p < .001$.
 
+  ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)
+```{r}
+df_24 <- df %>% 
+  filter(subject == "024")
+
+tibble(Accuracy_overall = mean(df$correct), Accuracy_subject_24 = mean(df_24$correct))
+
+df_24_6_frames <- df_24 %>% 
+  filter(target.frames == 6)
+
+df_6_frames <- df %>% 
+  filter(target.frames == 6)
+
+tibble(Accuracy_when_6_frames_overall = mean(df_6_frames$correct), Accuracy_when_6_frames_subject_24 = mean(df_24_6_frames$correct))
+
+t.test(x = (df_24$correct), mu = 0.5)
+```
+
+```{r}
+# Plot showing the estimated group-level (red lines) function with and which also includes the estimated subject-specific (blue lines) functions.
+plotdata <- df %>% 
+  select(-subject) # create data without subject to override facet_wrap in plot
+ggplot(df, aes(x = target.frames, y = as.numeric(as.character(correct))))+
+  geom_line(aes(target.frames, fitted(model_4)), color = "blue") +
+  geom_smooth(data = plotdata, method = "glm", se = FALSE, method.args = list(family = "binomial"), color = "red", size = 0.7) +
+  facet_wrap(.~subject)+
+  xlim(min = 0, max = 8)+
+  labs(y = "correct") + 
+  theme_bw()
+```
 
 3) Now add _pas_ to the group-level effects, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this  
+
   i. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?
 ```{r}
 model_6 <- glmer(correct ~ target.frames + pas + (target.frames | subject), data = df, family = binomial(link = logit))
 
 model_7 <- glmer(correct ~ target.frames*pas + (target.frames | subject), data = df, family = binomial(link = logit))
-summary(model_7)
 
 # Comparing
 anova(model_5,null,model_2, model_3, model_4,model_6, model_7)
 
 # Plotting group level effects (interaction effects)
 interactions::interact_plot(model = model_7, pred = target.frames, modx = pas)
-
-#another way...
-library(effects)
-plot(allEffects(model_7), multiline=TRUE, ci.style="bars")
 ```
-The log likelihood ratio test justifies adding the interaction between pas and target frames. Adding the interaction between pas rating and target frames increased the chi square by 1413.5 points from model 4 (the initially selected model).
+The log likelihood ratio test justifies adding the interaction between pas and target frames. Adding the interaction between pas rating and target frames increased the log likelihood by -9742 compared to model 4's -10448.8.
 
-The current best performing model (measured in accordance to the likelihood ratio test) is mode 7, which takes the following parameters:
+
+#### Continuation of report
+The best performing model (selected based on the results from the likelihood ratio test) is model 7, which takes the following parameters:
     
     correct ~ target.frames*pas + (target.frames | subject)
     
 
-    
+As target frames go up by 1, accuracy increases with 0.11480, meaning that if target was shown for 6 frames, accuracy would be 0.11*6 = 0.66
+Also, we see that there is a significant interaction between subjective reporting of visibility of the target and accuracy: The higher pas rating the more accurate the answer. This can be assessed from both the interaction plot, but also from the model.
 
+
+m6 includes an interaction between _pas_ and _target.frames_ as well as their individual effect. The plot illustrates why this interaction is meaningful to include. We can deduce that _target.frames_ barely affects correctness if _pas_ = 1. Contrarily, for _pas_ = 2 and 3 in particular, _target.frames_ affects correctness a lot. _pas_ = 4 is consistently above all other levels of pas regardless of the _target.frames_, suggesting that being very sure about your answer makes you more likely to answer correctly regardless of the number of target frames. All of the 4 functions are undefined at _target.frames_ = 0. This behavior is reasonable considering that you cannot show a target in 0 frames - hence this was not done in the experiment. 
 
 
 # EXERCISE 6 - Test linear hypotheses
@@ -228,10 +266,16 @@ model_8 <- glmer(correct ~ pas * target.frames + (target.frames | subject), data
 ```{r}
 summary(model_8)
 
-table(df$correct)
+p_load(boot)
+inv.logit(0.11481)
+inv.logit(0.44718)
 ```
 
-1=correct
+I see that the estimate for change in accuracy predicted by target.frame for pas 1 is simply lower (0.11481) than the estimate for change in accuracy in pas2 (0.44718). 
+
+
+
+df$correct: 0 = incorrect, 1 = correct
   
 2) `summary` won't allow you to test whether accuracy increases faster with objective evidence for PAS 3 than for PAS 2 (unless you use `relevel`, which you are not allowed to in this exercise). Instead, we'll be using the function `glht` from the `multcomp` package
     i. To redo the test in 6.1.i, you can create a _contrast_ vector. This vector will have the length of the number of estimated group-level effects and any specific contrast you can think of can be specified using this. For redoing the test from 6.1.i, the code snippet below will do
@@ -252,17 +296,23 @@ print(summary(gh))
 
   ii. Now test the hypothesis that accuracy increases faster with objective evidence for PAS 3 than for PAS 2.
 ```{r}
-
+contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
+gh <- glht(model_8, contrast.vector)
+print(summary(gh))
 ```
 
   iii. Also test the hypothesis that accuracy increases faster with objective evidence for PAS 4 than for PAS 3
 ```{r}
-
+contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
+gh <- glht(model_8, contrast.vector)
+print(summary(gh))
 ```
 
 3) Finally, test that whether the difference between PAS 2 and 1 (tested in 6.1.i) is greater than the difference between PAS 4 and 3 (tested in 6.2.iii)
 ```{r}
-
+contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
+gh <- glht(model_8, contrast.vector)
+print(summary(gh))
 ```
 
 
@@ -298,7 +348,14 @@ RSS <- function(dataset, par)
     `data`: the data frame with _x_, _target.frames_, and _y_, _correct_ in it  
     `method`: 'L-BFGS-B'  
     `lower`: lower bounds for the four parameters, (the lowest value they can take), you can set _c_ and _d_ as `-Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)  
-    `upper`: upper bounds for the four parameters, (the highest value they can take) can set _c_ and _d_ as `Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)    
+    `upper`: upper bounds for the four parameters, (the highest value they can take) can set _c_ and _d_ as `Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)
+```{r}
+
+
+
+```
+    
+
     ii. Plot the fits for the PAS ratings on a single plot (for subject 7) `xlim=c(0, 8)`
     iii. Create a similar plot for the PAS ratings on a single plot (for subject 7), but this time based on the model from 6.1 `xlim=c(0, 8)`   
     iv. Comment on the differences between the fits - mention some advantages and disadvantages of each way  
