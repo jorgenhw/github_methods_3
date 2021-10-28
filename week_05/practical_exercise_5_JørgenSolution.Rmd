@@ -243,12 +243,7 @@ The best performing model (selected based on the results from the likelihood rat
     
     correct ~ target.frames*pas + (target.frames | subject)
     
-
-As target frames go up by 1, accuracy increases with 0.11480, meaning that if target was shown for 6 frames, accuracy would be 0.11*6 = 0.66
-Also, we see that there is a significant interaction between subjective reporting of visibility of the target and accuracy: The higher pas rating the more accurate the answer. This can be assessed from both the interaction plot, but also from the model.
-
-
-m6 includes an interaction between _pas_ and _target.frames_ as well as their individual effect. The plot illustrates why this interaction is meaningful to include. We can deduce that _target.frames_ barely affects correctness if _pas_ = 1. Contrarily, for _pas_ = 2 and 3 in particular, _target.frames_ affects correctness a lot. _pas_ = 4 is consistently above all other levels of pas regardless of the _target.frames_, suggesting that being very sure about your answer makes you more likely to answer correctly regardless of the number of target frames. All of the 4 functions are undefined at _target.frames_ = 0. This behavior is reasonable considering that you cannot show a target in 0 frames - hence this was not done in the experiment. 
+The model tells us that the interaction effect has an impact on the accuracy which makes it meaningful to include in the model. From the plot we can tell, that if participants rated pas = 1, then the number of frames participant saw the target is not going to change accuracy very much. On the contrary, if participants rated pas = 2 or 3, then number of frames the target was shown for is affecting accuracy a lot. If participants rated pas = 4, then target frames is less likely to influence accuracy.
 
 
 # EXERCISE 6 - Test linear hypotheses
@@ -266,12 +261,11 @@ model_8 <- glmer(correct ~ pas * target.frames + (target.frames | subject), data
 ```{r}
 summary(model_8)
 
-p_load(boot)
-inv.logit(0.11481)
-inv.logit(0.44718)
+boot::inv.logit(0.11481)
+boot::inv.logit(0.44718)
 ```
 
-I see that the estimate for change in accuracy predicted by target.frame for pas 1 is simply lower (0.11481) than the estimate for change in accuracy in pas2 (0.44718). 
+The estimate for change in accuracy predicted by target.frame for pas 1 is simply lower (0.11481) than the estimate for change in accuracy in pas2 (0.44718). 
 
 
 
@@ -285,36 +279,34 @@ p_load(multcomp)
 
 ## testing whether PAS 2 is different from PAS 1
 contrast.vector <- matrix(c(0, 0, 0, 0, 0, 1, 0, 0), nrow=1)
-gh <- glht(model_8, contrast.vector)
-print(summary(gh))
-## as another example, we could also test whether there is a difference in
-## intercepts between PAS 2 and PAS 3
-contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
-gh <- glht(model_8, contrast.vector)
-print(summary(gh))
+gh_1 <- glht(model_8, contrast.vector)
+print(summary(gh_1))
+invlogit(coef(summary(gh_1))) # finding increase in percentile
 ```
 
-  ii. Now test the hypothesis that accuracy increases faster with objective evidence for PAS 3 than for PAS 2.
+as another example, we could also test whether there is a difference in intercepts between PAS 2 and PAS 3
 ```{r}
 contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
-gh <- glht(model_8, contrast.vector)
-print(summary(gh))
+gh_2 <- glht(model_8, contrast.vector)
+print(summary(gh_2))
+invlogit(coef(summary(gh_2))) 
 ```
 
-  iii. Also test the hypothesis that accuracy increases faster with objective evidence for PAS 4 than for PAS 3
+Testing if accuracy performance increases faster for pas3 than pas2
 ```{r}
-contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
-gh <- glht(model_8, contrast.vector)
-print(summary(gh))
+contrast.vector <- matrix(c(0, -1, 0, 1, 0, 0, 0, 0), nrow=1)
+gh_3 <- glht(model_8, contrast.vector)
+print(summary(gh_3))
+invlogit(coef(summary(gh_3))) 
 ```
 
-3) Finally, test that whether the difference between PAS 2 and 1 (tested in 6.1.i) is greater than the difference between PAS 4 and 3 (tested in 6.2.iii)
+Testing if accuracy performance increases faster for pas4 than pas3
 ```{r}
-contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
-gh <- glht(model_8, contrast.vector)
-print(summary(gh))
+contrast.vector <- matrix(c(0, -1, 0, 0, 1, 0, 0, 0), nrow=1)
+gh_4 <- glht(model_8, contrast.vector)
+print(summary(gh_4))
+invlogit(coef(summary(gh_4)))
 ```
-
 
 
 # EXERCISE 7 - Estimate psychometric functions for the Perceptual Awareness Scale and evaluate them  
@@ -382,5 +374,37 @@ print(head(y.hat.linear - mod1_comPool$linear.predictors))
 plot(df$target.frames,y.hat.linear)
 ####################################################################
 ```
+
+
+##############################
+
+
+
+
+
+
+
+### Snippet for 6.2.i
+```{r, eval=FALSE}
+## testing whether PAS 2 is different from PAS 1
+contrast.vector <- matrix(c(0, 0, 0, 0, 0, 1, 0, 0), nrow=1)
+gh <- glht(model_8, contrast.vector)
+print(summary(gh))
+#EXTRA - for my own understanding:
+#forklaring af hvorfor contrast.vector 
+coef(summary(model_8))  # dette specifikke 1-tal står er fordi det er acurracy change fra intercept (pas 1) til pas2:target.frames (pas 2, med interaction)
+contrast.vector <- matrix(c(0, 0, 0, 0, 0, 1, 0, 0), nrow=1)
+## as another example, we could also test whether there is a difference in
+## intercepts between PAS 2 and PAS 3
+contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
+gh <- glht(pas.intact.tf.ranslopeint.with.corr, contrast.vector)
+print(summary(gh))
+#EXTRA - for my own understanding:
+#forklaring af hvorfor contrast.vector 
+coef(summary(model7))  # dette specifikke 1-tal og -1-tal står er fordi det er acurracy change fra intercept (pas 1) til pas2:target.frames (pas 2, med interaction)
+contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
+```
+
+
 
 
