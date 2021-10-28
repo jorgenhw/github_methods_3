@@ -265,11 +265,8 @@ boot::inv.logit(0.11481)
 boot::inv.logit(0.44718)
 ```
 
-The estimate for change in accuracy predicted by target.frame for pas 1 is simply lower (0.11481) than the estimate for change in accuracy in pas2 (0.44718). 
+The summary of the model shows that accuracy increases with objective evidence - in this case the number of target frames - for pas2 than for pas1: the interaction effect for pas2 and target.frames (pas2:target.frames) is significant and positive (0.447).
 
-
-
-df$correct: 0 = incorrect, 1 = correct
   
 2) `summary` won't allow you to test whether accuracy increases faster with objective evidence for PAS 3 than for PAS 2 (unless you use `relevel`, which you are not allowed to in this exercise). Instead, we'll be using the function `glht` from the `multcomp` package
     i. To redo the test in 6.1.i, you can create a _contrast_ vector. This vector will have the length of the number of estimated group-level effects and any specific contrast you can think of can be specified using this. For redoing the test from 6.1.i, the code snippet below will do
@@ -289,25 +286,29 @@ as another example, we could also test whether there is a difference in intercep
 contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
 gh_2 <- glht(model_8, contrast.vector)
 print(summary(gh_2))
-invlogit(coef(summary(gh_2))) 
 ```
+There is no significant effect of a difference in intercepts between pas2 and pas3.
+
 
 Testing if accuracy performance increases faster for pas3 than pas2
 ```{r}
-contrast.vector <- matrix(c(0, -1, 0, 1, 0, 0, 0, 0), nrow=1)
+contrast.vector <- matrix(c(0, 0, 0, 0, 0, -1, 1, 0), nrow=1)
 gh_3 <- glht(model_8, contrast.vector)
 print(summary(gh_3))
-invlogit(coef(summary(gh_3))) 
 ```
+
+According to a hypothesis test, accuracy increases significantly faster with objective evidence (target.frames) for pas3 than pas2, β = 0.301, z = 6.528, p < .05.
 
 Testing if accuracy performance increases faster for pas4 than pas3
 ```{r}
-contrast.vector <- matrix(c(0, -1, 0, 0, 1, 0, 0, 0), nrow=1)
+contrast.vector <- matrix(c(0, 0, 0, 0, 0, 0, -1, 1), nrow=1)
 gh_4 <- glht(model_8, contrast.vector)
 print(summary(gh_4))
-invlogit(coef(summary(gh_4)))
 ```
+According to another hypothesis test, accuracy does not increase significantly faster with objective evidence (target.frames) for pas3 than pas2, β = 0.01, z = 0.142, p > .05
 
+3) Finally, test that whether the difference between PAS 2 and 1 (tested in 6.1.i) is greater than the difference between PAS 4 and 3 (tested in 6.2.iii)
+*?????????????????*
 
 # EXERCISE 7 - Estimate psychometric functions for the Perceptual Awareness Scale and evaluate them  
 
@@ -318,18 +319,22 @@ It has four parameters: _a_, which can be interpreted as the minimum accuracy le
 We can define a function of a residual sum of squares as below
 
 ```{r, eval=FALSE}
-RSS <- function(dataset, par)
-{
+RSS <- function(dataset, par) 
+  {
     ## "dataset" should be a data.frame containing the variables x (target.frames)
     ## and y (correct)
     
     ## "par" are our four parameters (a numeric vector) 
-    ## par[1]=a, par[2]=b, par[3]=c, par[4]=d
+    a = par[1] 
+    b = par[2] 
+    c = par[3] 
+    d = par[4]
+  
     x <- dataset$x
     y <- dataset$y
-    y.hat <- ## you fill in the estimate of y.hat
+    y.hat <- a + ((b-a)/(1+exp(1)^((c-x)/d))) 
     RSS <- sum((y - y.hat)^2)
-    return(RSS)
+    return(RSS) 
 }
 ```
 
@@ -342,13 +347,41 @@ RSS <- function(dataset, par)
     `lower`: lower bounds for the four parameters, (the lowest value they can take), you can set _c_ and _d_ as `-Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)  
     `upper`: upper bounds for the four parameters, (the highest value they can take) can set _c_ and _d_ as `Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)
 ```{r}
+df_partcipant007 <- df %>% 
+  dplyr::filter(subject == "007") %>% # For some reason, the dplyr commands only works if you specifically point to their package.
+  dplyr::select(target.frames, correct) %>% 
+  dplyr::rename(x = target.frames, y = correct)
 
+par <- c(0.5, 0.8, 1, 1)
 
-
+optim_participant007 <- optim(data = df_partcipant007, fn = RSS, par = par, method = 'L-BFGS-B', lower = c(0, 0, -Inf, -Inf), upper = c(1, 1, Inf, Inf))
+optim_participant007[1]
 ```
+Argument for par = (0.5, 0.8, 1, 1):
+a = 0.5, since this is the worst accuracy level; outcome being purely chance. b = 0.9 since 90% accuracy is fair (depending on the situation of course).
+
+The parameter estimates given my chosen estimates were: $ a = 0.38, b = 0.98, c = 2.23, d = 0.63 $
+
+The optim function is suggesting some quite differences parameters than I did. It is strange that it is suggesting lowest accuracy level of 38% percent, and 98% as upper bound of accuracy seems also a bit too high (Personal note to Lau: My understanding of the optim function is relatively limited...).
     
 
     ii. Plot the fits for the PAS ratings on a single plot (for subject 7) `xlim=c(0, 8)`
+```{R}
+sigmoid_007 <- function(x) 
+  {
+  optim_participant007$par[1] + ((optim_participant007$par[2]-optim_participant007$par[1])/(1+exp(1)^((optim_participant007$par[3]-x)/optim_participant007$par[4])))
+}
+
+
+ggplot() +
+  geom_point(aes(x = c(0:6), y = sigmoid_007(0:6))) +
+  geom_smooth(aes(x = c(0:6), y = sigmoid_007(0:6)), se = FALSE) + 
+  labs(title = "Estimated fits for PAS ratings",
+       x = "Target.Frames",
+       y = "Estimated PAS ratings using sigmoid-function") +
+  theme_bw()
+```
+
     iii. Create a similar plot for the PAS ratings on a single plot (for subject 7), but this time based on the model from 6.1 `xlim=c(0, 8)`   
     iv. Comment on the differences between the fits - mention some advantages and disadvantages of each way  
 2) Finally, estimate the parameters for all subjects and each of their four PAS ratings. Then plot the estimated function at the group-level by taking the mean for each of the four parameters, _a_, _b_, _c_ and _d_ across subjects. A function should be estimated for each PAS-rating (it should look somewhat similar to Fig. 3 from the article:  https://doi.org/10.1016/j.concog.2019.03.007)
@@ -374,37 +407,3 @@ print(head(y.hat.linear - mod1_comPool$linear.predictors))
 plot(df$target.frames,y.hat.linear)
 ####################################################################
 ```
-
-
-##############################
-
-
-
-
-
-
-
-### Snippet for 6.2.i
-```{r, eval=FALSE}
-## testing whether PAS 2 is different from PAS 1
-contrast.vector <- matrix(c(0, 0, 0, 0, 0, 1, 0, 0), nrow=1)
-gh <- glht(model_8, contrast.vector)
-print(summary(gh))
-#EXTRA - for my own understanding:
-#forklaring af hvorfor contrast.vector 
-coef(summary(model_8))  # dette specifikke 1-tal står er fordi det er acurracy change fra intercept (pas 1) til pas2:target.frames (pas 2, med interaction)
-contrast.vector <- matrix(c(0, 0, 0, 0, 0, 1, 0, 0), nrow=1)
-## as another example, we could also test whether there is a difference in
-## intercepts between PAS 2 and PAS 3
-contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
-gh <- glht(pas.intact.tf.ranslopeint.with.corr, contrast.vector)
-print(summary(gh))
-#EXTRA - for my own understanding:
-#forklaring af hvorfor contrast.vector 
-coef(summary(model7))  # dette specifikke 1-tal og -1-tal står er fordi det er acurracy change fra intercept (pas 1) til pas2:target.frames (pas 2, med interaction)
-contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
-```
-
-
-
-
