@@ -386,7 +386,8 @@ ggplot() +
     iv. Comment on the differences between the fits - mention some advantages and disadvantages of each way  
 2) Finally, estimate the parameters for all subjects and each of their four PAS ratings. Then plot the estimated function at the group-level by taking the mean for each of the four parameters, _a_, _b_, _c_ and _d_ across subjects. A function should be estimated for each PAS-rating (it should look somewhat similar to Fig. 3 from the article:  https://doi.org/10.1016/j.concog.2019.03.007)
     i. compare with the figure you made in 5.3.ii and comment on the differences between the fits - mention some advantages and disadvantages of both.
-    
+
+
 ## EXTRA STUFF
 From exercise 4.1
 ```{r}
