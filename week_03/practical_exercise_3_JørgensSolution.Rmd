@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Libraries in use
 library(pacman)
-p_load(tidyverse, lmer, lme4, gridExtra)
+p_load(tidyverse, lme4, gridExtra)
 
 ```
 
@@ -53,15 +53,13 @@ experiment2$correct <- (ifelse(experiment2$obj.resp == "e" & experiment2$target.
                                             ifelse(experiment2$obj.resp == "e" & experiment2$target.type == "odd", "0", NA)))))
 
 # Checking if things look as they're supposed to
-table(experiment2$correct)
-table(is.na(experiment2$correct))
+## table(experiment2$correct)
+## table(is.na(experiment2$correct))
 experiment2$correct <- as.factor(experiment2$correct)
 ```
 
 
 ii. describe what the following variables in the data frame contain, _trial.type_, _pas_, _trial_, _target.contrast_, _cue_, _task_, _target_type_, _rt.subj_, _rt.obj_, _obj.resp_, _subject_ and _correct_. (That means you can ignore the rest of the variables in your description). For each of them, indicate and argue for what `class` they should be classified into, e.g. _factor_, _numeric_ etc.
-
-
 
 **trial.type**
 The variable contains two levels and zero NA's; 
@@ -70,7 +68,7 @@ level 2: "staircase" (5603 observations)
 Since it contains two unique levels if makes sense to make them as factors.
 
 'Experiment' describes the actual experimental rounds whereas 'staircase' trials were performed at the beginning of the study, before the researchers collected the actual experimental trials, which maintained a fixed level of contrast throughout.
-From WikiP: _"Staircases usually begin with a high intensity stimulus, which is easy to detect. The intensity is then reduced until the observer makes a mistake, at which point the staircase 'reverses' and intensity is increased until the observer responds correctly, triggering another reversal. The values for the last of these 'reversals' are then averaged."_
+From WikiP: *"Staircases usually begin with a high intensity stimulus, which is easy to detect. The intensity is then reduced until the observer makes a mistake, at which point the staircase 'reverses' and intensity is increased until the observer responds correctly, triggering another reversal. The values for the last of these 'reversals' are then averaged."*
 
 **pas**
 Categorical variable contains four levels and zero NA's.
@@ -91,9 +89,6 @@ print(
   trial_hist <- ggplot(experiment2, aes(trial)) +
   geom_histogram(colour = "black", fill = "white")
 )
-# Zooming in on trial drop
-trial_hist +
-  xlim(225, 275)
 ```
 Each trial contained a number of tasks presented to the participant on a screen.
 
@@ -132,10 +127,12 @@ Categorical variable with two levels
 level 1: e (stands for even)
 level 2: 0 (stands for odd)
 
-The key actually pressed e for even and o for odd
+The key actually pressed e for even and o for odd.
+Should be factorized
 
 **subject**
 Participant/ID number
+Should obviously be factorized.
 
 **correct**
 A flag variable telling if response was either correct or incorrect; logical variable.
@@ -148,11 +145,13 @@ experiment2$task <- as.factor(experiment2$task)
 experiment2$cue <- as.factor(experiment2$cue)
 experiment2$trial <- as.integer(experiment2$trial)
 experiment2$pas <- as.factor(experiment2$pas)
+experiment2$correct <- as.factor(experiment2$correct)
+data$obj.resp <- as.factor(data$obj.resp)
+data$subject <- as.factor(data$subject)
 ```
 
 iii. for the staircasing part __only__, create a plot for each subject where you plot the estimated function (on the _target.contrast_ range from 0-1) based on the fitted values of a model (use `glm`) that models _correct_ as dependent on _target.contrast_. These plots will be our _no-pooling_ model. *Comment on the fits - do we have enough data to plot the logistic functions?*
 
-For this assignment we assume that you meant *complete pooling* and not *no pooling*. 
 ```{r}
 # Creating df only containing staircase trials
 exp2_staircase <- experiment2 %>% 
@@ -160,92 +159,71 @@ exp2_staircase <- experiment2 %>%
 
 # Complete pooling model
 model1 <- glm(correct ~ target.contrast, data = exp2_staircase, family = binomial(link=logit))
-levels(exp2_staircase$correct)
-#Printing
 summary(model1)
-
-exp2_staircase$fitmodel1 <- fitted(model1)
-
-
-# Does this make sense?
-ggplot(exp2_staircase)+
-  geom_point(aes(x = target.contrast, y = fitted(model1), color = subject))+
-  geom_line(aes(x = target.contrast, y = fitted(model1))) +
-  facet_wrap(~subject)
-
-# Complete pooling plot
-ggplot(exp2_staircase, (aes(x = target.contrast, y = correct, color= subject)))+
-  geom_point()+
-  geom_line(aes(target.contrast, fitted(model1))) +
-  facet_wrap(.~subject)+ 
-  labs(title = "Complete Pooling model: correct~target.contrast") +
-  theme_bw()
 ```
 
+Plotting estimated function on target contrast based on the fitted values of the no pooling model.
 ```{R}
-nopoolfun <- function(i){
-  dat <- exp2_staircase[which(exp2_staircase$subject == i),]
+nopoolfun <- function(subjectID){
+  dat <- exp2_staircase[which(exp2_staircase$subject == subjectID),]
   model <- glm(correct ~ target.contrast, family = 'binomial', data=dat)
   fitted <- model$fitted.values
   plot_dat <- data.frame(cbind(fitted,'target.contrast' = dat$target.contrast))
 plot <- ggplot(plot_dat, aes(x = target.contrast, y = fitted)) + #fitted
-  geom_point()+
+  geom_point()+ 
   geom_line(aes(x = target.contrast, y = fitted))+
   xlab('Target Contrast')+
-  ylim(c(0,1))+
+  ylim(c(0,1))
   theme_minimal()
 print(plot)
 }
-
-nopoolfun("023")
 
 # Running the function for each participant
 for (i in unique(exp2_staircase$subject)) {
   nopoolfun(i)
 }
-
-subjects <- c(1:29)
-plots <- lapply(subjects, FUN=nopoolfun)
-do.call(grid.arrange,plots)
-
 ```
 
-### A third approach
+### Another approach
 ```{r}
 # Model with subject as fixed effect (and thus no pooling)
-modelx <- glm(correct ~ target.contrast + subject, data = exp2_staircase, family = binomial(link = logit))
-
-modelxx <- glm(correct ~ target.contrast*subject, data = exp2_staircase, family = binomial(link = logit))
+model1.2 <- glm(correct ~ target.contrast + subject, data = exp2_staircase, family = binomial(link = logit))
 
 exp2_staircase %>%
     ggplot(aes(target.contrast, as.factor(correct), color = correct)) +
     geom_point() +
-    geom_line(aes(target.contrast, fitted(modelxx),
+    geom_line(aes(target.contrast, fitted(model1.2),
         linetype = "fitted values"), inherit.aes = FALSE) +
     scale_linetype_manual(name = "single-level model", values = c("dashed")) +
     facet_wrap(~subject) +
     labs(title = "Correct answers by target contrast per participant",
         subtitle = "With single-level model fitted values (no-pooling)",
         color = "subject correct") +
-    ylab("Correct (probability)") +
+    ylab("Correct") +
     xlab("target contrast")
-
 ```
-
+I have no idea as to why the fitted values are below 0...
 
 iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_ 
 ```{r}
 # Partial pooling model
-model2 <- glmer(correct ~ target.contrast + (1 | subject), data = exp2_staircase, family = binomial(link = logit))
+model2 <- glmer(correct ~ target.contrast + (target.contrast | subject), data = exp2_staircase, family = binomial(link = logit))
 
-# ???? gotta be wrong...
-ggplot(exp2_staircase)+
-  geom_point(aes(x = target.contrast, y = correct, color = subject))+
-  geom_line(aes(x = target.contrast, y = fitted(model2))) +
-  facet_wrap(~subject)
+#partial
+model2 <- glmer(correct~target.contrast + (target.contrast|subject), data = exp2_staircase, family = "binomial")
+fitted <- fitted(model2)
+exp2_staircase$fitted_values <- fitted
+ggplot(exp2_staircase, (aes(x = target.contrast, y = as.numeric(as.character(correct)))))+ 
+  geom_point()+
+  geom_line(aes(target.contrast, fitted_values), color = "red") +
+  facet_wrap(.~subject)+ 
+  labs(title = "Partial Pooling", y = "Correct") +
+  theme_bw()
 ```
 
 v. in your own words, describe how the partial pooling model allows for a better fit for each subject
+
+As can be seen from the plot, the partial pooling models takes into consideration the individual differences between the participants as well as general tendencies in the data (hard to tell from plot though). All participants have individual baselines when you do partial pooling which conceptually makes way more sense. 
 
 
 
@@ -323,27 +301,26 @@ theme_bw()
 
 
 library(gridExtra)
-
-grid.arrange(sub1, sub2, sub3, sub4)
-
 grid.arrange(sub1log, sub2log, sub3log, sub4log, sub1, sub2, sub3, sub4)
 ```
 
     ii. does a log-transformation of the response time data improve the Q-Q-plots?
-Yes, it seems like it. The log transformation removes some of the skewness in the data (which is also one of the purposes of transforming the data). To numerically assess how much influence the log-transformation had on the data, we can run a stat.desc analysis on the non-transformed and transformed data (in this case done for participant 1):
+The log transformation removes some of the skewness in the data (which is also one of the purposes of transforming the data). To numerically assess how much influence the log-transformation had on the data, we can run a stat.desc analysis on the non-transformed and transformed data (in this case done for participant 1):
 ```{r}
 round(pastecs::stat.desc(cbind(rt.obj = exp2_exp_ID1$rt.obj, rt.obj_log = log(exp2_exp_ID1$rt.obj)), basic = FALSE, norm = TRUE), digits = 2)
 ```
 To calculate the reduction in skewness, we apply the following formula: (3*(mean-median))/std.dev (source: Larose, D. T., & Larose, C. D. (2014))
 ```{r}
-print(skewness <- (3*(0.89-0.84))/0.43)
+skewness <- (3*(0.89-0.84))/0.43
 
-print(skewness_log <- 3*((-0.21)-(-0.18))/0.45)
+skewness_log <- 3*((-0.21)-(-0.18))/0.45
+
+tibble(without_log_trans = skewness[1], with_log_trans = skewness_log)
 ```
-So we went from 0.34 to -0.20 skewness, which is a great deal. We could try other transformations to try to make a better performance but due to the scope of the assignment we won't do this.
+By doing the transformation we went from 0.34 to -0.20 skewness, which is a great deal. We could try other transformations to try to make a better performance, but due to the scope of the assignment we won't do this.
 
 
-2) Now do a partial pooling model modelling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification)
+2) Now do a partial pooling model, modeling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification)
 ```{r}
 # Partial pooling, with RT dep on task
 model7 <- lmer(rt.obj ~ task + (1| subject), data = exp2_experiment, REML = FALSE)
@@ -371,13 +348,6 @@ model12 <- lmer(rt.obj ~ task + (1 | subject) + (1 | pas), data = exp2_experimen
 # Three random intercepts
 model14 <- lmer(rt.obj ~ task + (1 | subject) + (1 | trial) + (1 | task), data = exp2_experiment, REML = F)
 
-# 
-model15 <- lmer(rt.obj ~ task + (1 | subject) + (1 | trial) + (1 | task), data = exp2_experiment, REML = F)
-
-#
-model16 <- lmer(rt.obj ~ task + (1 | subject) + (1 | trial) + (1 | task), data = exp2_experiment, REML = F)
-
-
 
 summary(model8)
 MuMIn::r.squaredGLMM(model8) #R2c = 0.01464871
@@ -390,35 +360,54 @@ We see, that response time is fastest in the pairs condition (1.12 seconds). Whe
 
 
 3) Now add _pas_ and its interaction with _task_ to the fixed effects  
-    i. how many types of group intercepts (random effects) can you add without ending up with convergence issues or singular fits?  
-    ii. create a model by adding random intercepts (without modelling slopes) that results in a singular fit - then use `print(VarCorr(<your.model>), comp='Variance')` to inspect the variance vector - explain why the fit is singular (Hint: read the first paragraph under details in the help for `isSingular`)
-    iii. in your own words - how could you explain why your model would result in a singular fit? *singularity: when the model is closing 0 variance = overfitting*.
-
-Factors resulting in singular fit:
- - avoid fitting overly complex models, such that the variance-covariance matrices can be estimated precisely enough
- - “keep it maximal”, i.e. fit the most complex model consistent with the experimental design, removing only terms required to allow a non-singular fit
- - use some form of model selection to choose a model that balances predictive accuracy and overfitting/type I error
-
-```{r}
-model9 <- lmer(rt.obj ~ pas*task + (1| subject), data = exp2_experiment, REML = F)
-# Adding different random effects to see when we reach singularity
-
+```{R}
+pas_interaction_model <- lmer(rt.obj ~ task*pas + (1|subject) + (1|trial), REML=FALSE, data = experiment2)
+summary(pas_interaction_model)
 ```
 
+  i. how many types of group intercepts (random effects) can you add without ending up with convergence issues or singular fits?
+```{R}
+converge1 <- lmer(rt.obj ~ task*pas + (1|subject) + (1|trial) + (1|cue), REML=FALSE, data = experiment2)
+
+converge2 <- lmer(rt.obj ~ task*pas + (1|subject) + (1|trial) + (1|cue) + (1|target.contrast), REML=FALSE, data = experiment2)
+
+converge3 <- lmer(rt.obj ~ task*pas + (1|subject) + (1|trial) + (1|cue) + (1|target.contrast) + (1|rt.subj), REML=FALSE, data = experiment2)
+```
+
+After adding the fifth random intercept, the model would not converge anymore.
+
+  ii. create a model by adding random intercepts (without modelling slopes) that results in a singular fit - then use `print(VarCorr(<your.model>), comp='Variance')` to inspect the variance vector - explain why the fit is singular (Hint: read the first paragraph under details in the help for `isSingular`)
+```{r}
+isSin1 <- lmerTest::lmer(rt.obj ~ task + pas + task:pas + (1|subject) + (1|trial) + (1|rt.subj) + (1|even.digit) + (1|cue), REML=FALSE, data = experiment2)
+```
+
+```{r}
+print(VarCorr(isSin1), comp='Variance')
+```
+
+The reason why the model is singular is because the differnt random intecepts leads to random-effect estimates of almost zero (as can be seen with even.digit). 
+
+
+
+  iii. in your own words - how could you explain why your model would result in a singular fit?
+
+Fitting overly complex models, such that the variance-covariance matrices cannot be estimated precisely enough results in a singular fit. In other words: Singular fits is also equivalent to saying that your model is overfitting the data.
 
 ## Exercise 3
 
 1) Initialise a new data frame, `data.count`. _count_ should indicate the number of times they categorized their experience as _pas_ 1-4 for each _task_. I.e. the data frame would have for subject 1: for task:singles, pas1 was used # times, pas2 was used # times, pas3 was used # times and pas4 was used # times. You would then do the same for task:pairs and task:quadruplet  
 
 ```{r}
-## you can start from this if you want to, but you can also make your own from scratch
-data.count <- data.frame(count = numeric(), 
-                         pas = numeric(), ## remember to make this into a factor afterwards
-                         task = numeric(), ## and this too
-                         subject = numeric()) ## and this too
+countData <- experiment2 %>% 
+  group_by(subject, task, pas) %>% 
+  summarise("count" = n())
 ```        
 
-2) Now fit a multilevel model that models a unique "slope" for _pas_ for each _subject_ with the interaction between _pas_ and _task_ and their main effects being modelled  
+2) Now fit a multilevel model that models a unique "slope" for _pas_ for each _subject_ with the interaction between _pas_ and _task_ and their main effects being modelled
+```{r}
+pasModel <- lmer(count ~ pas*task + (1|pas) + (1|subject), data = countData, family = poisson)
+```
+
     i. which family should be used?  
     ii. why is a slope for _pas_ not really being modelled?  
     iii. if you get a convergence error, try another algorithm (the default is the _Nelder_Mead_) - try (_bobyqa_) for which the `dfoptim` package is needed. In `glmer`, you can add the following for the `control` argument: `glmerControl(optimizer="bobyqa")` (if you are interested, also have a look at the function `allFit`)
