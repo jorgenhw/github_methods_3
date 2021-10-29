@@ -336,12 +336,13 @@ RSS <- function(dataset, par)
     RSS <- sum((y - y.hat)^2)
     return(RSS) 
 }
+
 ```
 
 1) Now, we will fit the sigmoid for the four PAS ratings for Subject 7
     i. use the function `optim`. It returns a list that among other things contains the four estimated parameters. You should set the following arguments:  
     `par`: you can set _c_ and _d_ as 1. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)  
-    `fn`: which function to minimise?  
+    `fn`: which function to minimise? Residual sum of squares.
     `data`: the data frame with _x_, _target.frames_, and _y_, _correct_ in it  
     `method`: 'L-BFGS-B'  
     `lower`: lower bounds for the four parameters, (the lowest value they can take), you can set _c_ and _d_ as `-Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)  
@@ -355,7 +356,8 @@ df_partcipant007 <- df %>%
 par <- c(0.5, 0.8, 1, 1)
 
 optim_participant007 <- optim(data = df_partcipant007, fn = RSS, par = par, method = 'L-BFGS-B', lower = c(0, 0, -Inf, -Inf), upper = c(1, 1, Inf, Inf))
-optim_participant007[1]
+
+print(optim_participant007[1])
 ```
 Argument for par = (0.5, 0.8, 1, 1):
 a = 0.5, since this is the worst accuracy level; outcome being purely chance. b = 0.9 since 90% accuracy is fair (depending on the situation of course).
@@ -363,9 +365,9 @@ a = 0.5, since this is the worst accuracy level; outcome being purely chance. b 
 The parameter estimates given my chosen estimates were: $ a = 0.38, b = 0.98, c = 2.23, d = 0.63 $
 
 The optim function is suggesting some quite differences parameters than I did. It is strange that it is suggesting lowest accuracy level of 38% percent, and 98% as upper bound of accuracy seems also a bit too high (Personal note to Lau: My understanding of the optim function is relatively limited...).
-    
 
-    ii. Plot the fits for the PAS ratings on a single plot (for subject 7) `xlim=c(0, 8)`
+
+  ii. Plot the fits for the PAS ratings on a single plot (for subject 7) `xlim=c(0, 8)`
 ```{R}
 sigmoid_007 <- function(x) 
   {
@@ -382,29 +384,199 @@ ggplot() +
   theme_bw()
 ```
 
-    iii. Create a similar plot for the PAS ratings on a single plot (for subject 7), but this time based on the model from 6.1 `xlim=c(0, 8)`   
-    iv. Comment on the differences between the fits - mention some advantages and disadvantages of each way  
-2) Finally, estimate the parameters for all subjects and each of their four PAS ratings. Then plot the estimated function at the group-level by taking the mean for each of the four parameters, _a_, _b_, _c_ and _d_ across subjects. A function should be estimated for each PAS-rating (it should look somewhat similar to Fig. 3 from the article:  https://doi.org/10.1016/j.concog.2019.03.007)
-    i. compare with the figure you made in 5.3.ii and comment on the differences between the fits - mention some advantages and disadvantages of both.
+  iii. Create a similar plot for the PAS ratings on a single plot (for subject 7), but this time based on the model from 6.1 `xlim=c(0, 8)`
+Due to only having 1 subject (subject 7), it is not possible to run the model from exercise 6.1 with random effects (target.frames|subject). Thus, the random effects are removed from the model, in order to run it for subject 7; (correct~pas*target.frames). 
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+set.seed(1)
+###function to minimize - function of residual sum of squares
+RSS <- function(dataset, par)
+{
+    ## "dataset" should be a data.frame containing the variables x (target.frames)
+    ## and y (correct)
+    
+    ## "par" are our four parameters (a numeric vector) 
+    a <- par[1]
+    b <- par[2]
+    c <- par[3]
+    d <- par[4]
+    
+    x <- dataset$x
+    y <- dataset$y
+    y.hat <- a+((b-a)/(1+exp((c-x)/d)))  #sigmoid funtion
+    RSS <- sum((y - y.hat)^2)
+    return(RSS)
+}
+# fit the sigmoid for the four PAS ratings for Subject 7 - extract subject 7 data
+df7 <- df %>% 
+  filter(subject == "007") %>% 
+  dplyr::select(correct, target.frames, pas) %>% 
+  rename(x= target.frames, y= correct)
+df7$y <- as.numeric(df7$y)
+#use the function `optim`, to make a list containing the four estimated parameters. You should set the following arguments:  
+par <- c(0.50, 1, 1, 1) # par=  a, b, c, d (starting point)
+lower <- c(0.5,0.5, -Inf, -Inf) #lower bounds for the four parameters (the lowest value they can take), a & b are chosen by me, c & d = Inf  (lower boundaries for starting point a and b)
+upper <- c(1,1, Inf, Inf) #upper bounds for the four parameters (the highest value they can take), a & b are chosen by me, c & d = -Inf (upper boundaries for starting point a and b)
+parameters <- optim(data= df7,par = par, fn = RSS, method= 'L-BFGS-B',lower =lower, upper =upper);print(parameters[[1]][1:4])
+###########Estimating fits from sigmoid function
+#Estimating the four parameters and making a tibble
+parameters <- optim(data= df7,par = par, fn= RSS, method= 'L-BFGS-B',lower =lower, upper =upper)
+parameters_values <- c(parameters[[1]][1], parameters[[1]][2], parameters[[1]][3], parameters[[1]][4])
+sigmoid_function <- function(x) {
+  parameters_values[1]+((parameters_values[2]-parameters_values[1])/(1+exp((parameters_values[3]-x)/parameters_values[4])))
+  }
+sigplot<- ggplot() +
+  geom_point(aes(x = c(0:6), y = sigmoid_function(0:6))) +
+  geom_smooth(aes(x = c(0:6), y = sigmoid_function(0:6)), se = FALSE) + 
+  labs(title = "Estimated fits for PAS ratings",
+       x = "Target.Frames",
+       y = "Predicted Accuracy") +
+  theme_bw();print(sigplot)
+########## Plot the fits for the PAS ratings on a single plot (for subject 7)
+## running the optim function on each of the four pas ratings
+# subject 7 - pas 1
+pas1 <- df %>% 
+  filter(subject == "007") %>% 
+  filter(pas == "1") %>% 
+  dplyr::select(correct, target.frames, pas) %>% 
+  rename(x= target.frames, y= correct)
+par1<- optim(data= pas1,par = par, fn= RSS, method= 'L-BFGS-B',lower =lower, upper =upper)
+# subject 7 - pas 2
+pas2 <- df %>% 
+  filter(subject == "007") %>% 
+  filter(pas == "2") %>% 
+  dplyr::select(correct, target.frames, pas) %>% 
+  rename(x= target.frames, y= correct)
+par2<- optim(data= pas2,par = par, fn= RSS, method= 'L-BFGS-B',lower =lower, upper =upper)
+# subject 7 - pas 3
+pas3 <- df %>% 
+  filter(subject == "007") %>% 
+  filter(pas == "3") %>% 
+  dplyr::select(correct, target.frames, pas) %>% 
+  rename(x= target.frames, y= correct)
+par3<- optim(data= pas3,par = par, fn= RSS, method= 'L-BFGS-B',lower =lower, upper =upper)
+# subject 7 - pas 4 
+pas4 <- df %>% 
+  filter(subject == "007") %>% 
+  filter(pas == "4") %>% 
+  dplyr::select(correct, target.frames, pas) %>% 
+  rename(x= target.frames, y= correct)
+par4<- optim(data= pas4,par = par, fn= RSS, method= 'L-BFGS-B',lower =lower, upper =upper)
+# creating a function for the sigmoid function
+sigmoid_fun <- function(a,b,c,d,x){
+  y.hat <- a + ((b-a)/(1+exp((c-x)/d)))
+  return(y.hat)
+}
+# simulating x-values between 0-8 with increments of 0.01 for making that plot pretty
+x_values <- seq(0, 8, by = 0.01)
+# calculating yhat values for each of the four pas ratings using the sigmoid function
+yhat1 <- sigmoid_fun(par1[[1]][1],par1[[1]][2], par1[[1]][3], par1[[1]][4], x_values)
+yhat2 <- sigmoid_fun(par2[[1]][1], par2[[1]][2], par2[[1]][3], par2[[1]][4], x_values)
+yhat3 <- sigmoid_fun(par3[[1]][1], par3[[1]][2], par3[[1]][3], par3[[1]][4], x_values)
+yhat4 <- sigmoid_fun(par4[[1]][1], par4[[1]][2], par4[[1]][3], par4[[1]][4], x_values)
+# combining it all into a dataframe
+values <- data.frame(x_values, yhat1, yhat2, yhat3, yhat4)
+# plotting the four lines for each of the pas ratings
+sigfit_pas_plot<- ggplot(values, aes(x = x_values))+
+  geom_line(aes(y = yhat1, color = "blue"))+
+  geom_line(aes(y = yhat2, color = "green"))+
+  geom_line(aes(y = yhat3, color = "red"))+
+  geom_line(aes(y = yhat4, color = "orange"))+
+  scale_color_discrete(name="Pas",
+                         breaks=c("blue", "green", "red", "orange"),
+                         labels=c("Pas 1", "Pas 2", "Pas 3", "Pas 4 "))+
+  xlim(c(0, 8))+
+  ylim(c(0,1))+
+  xlab("Target Frames")+
+  ylab("Predicted Accuracy")+
+  ggtitle("Estimated fits for each PAS rating");print(sigfit_pas_plot)
+########### Create a similar plot for the PAS ratings on a single plot (for subject 7), but this time based on the model from 6.1 `xlim=c(0, 8)`
+##### Model that gives us predicted values
+model8 <- glm(y~x*pas, data= df7, binomial(link = 'logit')) #model without random slope and intercept 
+model8_fit <- fitted.values(model8)
+###### df for comparison (with our original data)
+df7 <- df %>% 
+  filter(subject == "007") %>% 
+  dplyr::select(correct, target.frames, pas) %>% 
+  rename(x= target.frames, y= correct)
+# plot of PAS ratings based on model 8 (but only for subject 7)
+modelfit_pas_plot <- df7 %>% 
+  ggplot(aes(x = x, y = y, colour = pas)) +
+  geom_line(aes(x = x, y = model8_fit))+
+  labs(title = "Estimated fits of PAS ratings from model",
+       x = "Target Frames",
+       y = "Predicted Accuracy");print(modelfit_pas_plot)
+#comparing the plots
+gridExtra::grid.arrange(sigplot,sigfit_pas_plot,modelfit_pas_plot)
+```
 
 
-## EXTRA STUFF
-From exercise 4.1
-```{r}
-####################################################################
-# Model matrix
-X <- model.matrix(mod1_comPool)
-# Coefficients
-print(beta.hat <- mod1_comPool$coefficients)
-# Predictors: linear predictors
-print(head(linear.predictor <- X %*% beta.hat))
-# these are the fitted values
-print(head(y.hat <- g.inv(X %*% beta.hat)))
-print(head(y.hat - mod1_comPool$fitted.values))
-#These are the linear predictors
-y.hat.linear <- X %*% beta.hat
-print(head(y.hat.linear - mod1_comPool$linear.predictors))
+    
+## Exercise 7.2 
+##### 2) Finally, estimate the parameters for all subjects and each of their four PAS ratings. Then plot the estimated function at the group-level by taking the mean for each of the four parameters, _a_, _b_, _c_ and _d_ across subjects. A function should be estimated for each PAS-rating (it should look somewhat similar to Fig. 3 from the article:  https://doi.org/10.1016/j.concog.2019.03.007)
 
-plot(df$target.frames,y.hat.linear)
-####################################################################
+
+### i. Comparison and comments
+##### Compare with the figure you made in 5.3.ii and comment on the differences between the fits - mention some advantages and disadvantages of both.
+
+Once again, I have absolutely no clue.. 
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+par <- c(0.5, 1, 1, 1)
+fn <- RSS
+method = 'L-BFGS-B'
+lower = c(0.5, 0.5, -Inf, -Inf)
+upper = c(1, 1, Inf, Inf)
+loop.df <- df %>% 
+  mutate(x = target.frames, 
+         y = correct, 
+         subject = as.numeric(subject),
+         pas = as.numeric(pas))
+n <- 0
+output <- data.frame(subject=character(),
+                 pas=integer(),
+                 a=integer(),
+                 b=integer(),
+                 c=integer(),
+                 d=integer())
+for (i in 1:29) {
+  
+  for (n in 1:4) {
+  subject.df <- loop.df %>% 
+    filter(subject == i & pas == n)
+  
+  optimated <- optim(par = par, 
+                     data = subject.df,  
+                     fn = fn, 
+                     method = method, 
+                     lower = lower, 
+                     upper =  upper)
+  
+  optimated.output <- data.frame(subject=i,
+                 pas=n,
+                 a=optimated$par[1],
+                 b=optimated$par[2],
+                 c=optimated$par[3],
+                 d=optimated$par[4])
+  
+  output <- rbind(output, optimated.output)
+}
+}
+summarised.output <- output %>% 
+  group_by(pas) %>% 
+  summarise(mean.a=mean(a), mean.b=mean(b), mean.c=mean(c), mean.d=mean(d))
+# The formula for the sigmoid, with the optimized parameters that we found before
+mean.fit.pas1 <- function(x) summarised.output$mean.a[1] + ((summarised.output$mean.b[1]-summarised.output$mean.a[1]) / (1+exp((summarised.output$mean.c[1]-x)/(summarised.output$mean.d[1]))))
+mean.fit.pas2 <- function(x) summarised.output$mean.a[2] + ((summarised.output$mean.b[2]-summarised.output$mean.a[2]) / (2+exp((summarised.output$mean.c[2]-x)/(summarised.output$mean.d[2]))))
+mean.fit.pas3 <- function(x) summarised.output$mean.a[3] + ((summarised.output$mean.b[3]-summarised.output$mean.a[3]) / (3+exp((summarised.output$mean.c[3]-x)/(summarised.output$mean.d[3]))))
+mean.fit.pas4 <- function(x) summarised.output$mean.a[4] + ((summarised.output$mean.b[4]-summarised.output$mean.a[4]) / (4+exp((summarised.output$mean.c[4]-x)/(summarised.output$mean.d[4]))))
+ggplot() +
+  xlim(0, 8) +
+  ylim(0, 1) +
+  geom_function(aes(color = "pas1"), fun = mean.fit.pas1) +
+  geom_function(aes(color = "pas2"), fun = mean.fit.pas2) +
+  geom_function(aes(color = "pas3"), fun = mean.fit.pas3) +
+  geom_function(aes(color = "pas4"), fun = mean.fit.pas4) +
+  labs(x = "target.frames", y = "Likelihood of being correct", title = "Title") +
+  theme_minimal() 
 ```
