@@ -257,15 +257,11 @@ summary(model5)
 model6 <- lmer(f0mn ~ gender*attitude + (1 | subject) + (1 | scenario), data = politeness)
 summary(model6)
 
-# iii. describe what the interaction term in the model says about Korean men's pitch when they are polite relative to Korean women's pitch when they are polite (you don't have to judge whether it is interesting)
-
-
+table(politeness$attitude)
+class(politeness$attitude)
+class(politeness$gender)
 ```
-
 The interaction term in the model says that Korean men's pitch is 5.885hz higher than women's (when adjusted for gender difference) meaning that men has a higher pitch when in a polite situation than women.
-
-*Explainer on class*
-
 
 *Explainer for myself*: 
 Pitch for kvinder når informal er gennemsnitligt 252.895 hz
