@@ -26,10 +26,8 @@ To make sure that _Python_ runs within _R Markdown_, make sure you have the _ret
 Also create a text file that is called _.Renviron_ (remember the dot) placed in the folder where your _RProj_ file is. It should have a single line: `RETICULATE_PYTHON=PATH` where `PATH` is the path to your _methods3_ conda environment. Use the commands below to find the paths:  
 
 ```{r}
-library(reticulate)
-install.packages("Rcpp")
+pacman::p_load(reticulate,Rcpp)
 
-library(Rcpp)
 print(conda_list())
 ```
 
