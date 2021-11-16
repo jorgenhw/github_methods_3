@@ -55,35 +55,35 @@ def squareFunction(i):
 # Generate random numbers
 import numpy as np
 
-x = np.arange(0, 6, 0.1) # all values from 0-6 which goes up by 0.1 each time
-x
-y = squareFunction(3)
+y = np.arange(0, 6, 0.1) # all values from 0-6 which goes up by 0.1 each time
+f(x) = squareFunction(i)
 
 np.random.seed(7)
-y_noise = np.random.normal(scale=5) # loc = mean, scale = std deviation, size = numbers
-len(y_noisy)
+y_noise = np.random.normal(scale=5, size = len(x)) # loc = mean, scale = std deviation, size = numbers
 
-noise_vector = y + y_noisy
-
-print(noise_vector)
+noise_vector = y + y_noise
 
 # Plot libraries
 import pandas as pd
 from matplotlib import pyplot as plt
 
 # Plot syntax matplotlib
-plt.figure() # initialize new plot
-plt.plot(x, y_noise, 'bo')
+#plt.figure() # initialize new plot
+#plt.plot(x, y_noise, 'bo')
 
-plt.plot (x, y_true, 'r-')
-plt.legend(['noisy_data', 'true'])
-plt.show()
+#plt.plot (x, y_true, 'r-')
+#plt.legend(['noisy_data', 'true'])
+#plt.show()
 ```
 
 2) Fit a linear regression using `LinearRegression` from `sklearn.linear_model` based on $y_{noisy}$ and $x$ (see code chunk below associated with Exercise 1.2)  
     i. plot the fitted line (see the `.intercept_` and `.coef_` attributes of the `regressor` object) on top of the plot (from 1.1.iii)
     ii. now run the code chunk below associated with Exercise 1.2.ii - what does X_quadratic amount to?
     iii. do a quadratic and a fifth order fit as well and plot them (on top of the plot from 1.2.i)
+```{r}
+
+```
+
 3) Simulate 100 samples, each with sample size `len(x)` with $\sigma=5$ normally distributed noise added on top of the true function    
     i. do linear, quadratic and fifth-order fits for each of the 100 samples  
     ii. create a __new__ figure, `plt.figure`, and plot the linear and the quadratic fits (colour them appropriately); highlight the true value for $x_0=3$. From the graphics alone, judge which fit has the highest bias and which has the highest variance for $x_0$  

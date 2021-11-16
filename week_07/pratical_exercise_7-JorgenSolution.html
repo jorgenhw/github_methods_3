@@ -400,32 +400,37 @@ summary {
 <li>plot the true function and the generated points</li>
 </ol></li>
 </ol>
+<p>Help? scikitlearn</p>
 <pre class="python"><code># True function
 def squareFunction(i):
     return i**2
 
-squareFunction(4)
-
-# Generate random numbers</code></pre>
-<pre><code>## 16</code></pre>
-<pre class="python"><code>import numpy as np
+#### 1.i
+# Generate random numbers
+import numpy as np
 
 x = np.arange(0, 6, 0.1) # all values from 0-6 which goes up by 0.1 each time
-
 y = squareFunction(3)
 
 np.random.seed(7)
-y_noisy = np.random.normal(loc=5, scale=5, size=6) # loc = mean, scale = std deviation, size = numbers
+y_noise = np.random.normal(scale=5) # loc = mean, scale = std deviation, size = numbers
 
-noise_vector = y_noisy + y
+noise_vector = y + y_noise
 
 print(noise_vector)
-</code></pre>
-<pre><code>## [22.45262852 11.67031315 14.16410082 16.03758141 10.05538486 14.01032786]</code></pre>
-<pre class="python"><code>import pandas as pd
-from matplotlib import pyplot as plt
 
-plt.plot([x])</code></pre>
+# Plot libraries
+#import pandas as pd
+#from matplotlib import pyplot as plt
+
+# Plot syntax matplotlib
+#plt.figure() # initialize new plot
+#plt.plot(x, y_noise, &#39;bo&#39;)
+
+#plt.plot (x, y_true, &#39;r-&#39;)
+#plt.legend([&#39;noisy_data&#39;, &#39;true&#39;])
+#plt.show()</code></pre>
+<pre><code>## 17.45262851900178</code></pre>
 <ol start="2" style="list-style-type: decimal">
 <li>Fit a linear regression using <code>LinearRegression</code> from <code>sklearn.linear_model</code> based on <span class="math inline">\(y_{noisy}\)</span> and <span class="math inline">\(x\)</span> (see code chunk below associated with Exercise 1.2)
 <ol style="list-style-type: lower-roman">
