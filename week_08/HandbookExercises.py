@@ -84,6 +84,7 @@ y = np.array([4, 5, 6])
 np.concatenate([x, y])
 
 # Concatenate can also be done on two dimensional scale
+## Concatenate = joining two arrays
 grid = np.array([[1, 2, 3],
                 [4, 5, 6]])
 
