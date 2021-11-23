@@ -175,9 +175,23 @@ The fact that we are not penalizing the model
 """
 
 # 2.1.6: Now apply the L1 penalty instead - how many of the coefficients (.coef_) are non-zero after this?
-logR = LogisticRegression(C=10, penalty="l1", tol=0.01, solver='saga') # with regularization
+logR = LogisticRegression(C=10, penalty="l1", tol=0.01, solver='liblinear') # With regularization
 logR.fit(X_1_2_scaled, y_1_2)
 print(logR.score(X_1_2_scaled, y_1_2))
 
+fit1 = logR.fit(X_1_2_scaled, y_1_2)
+
+len(fit1.coef_ == 0)
+len(fit1.coef_ != 0)
+
+print(np.sum(fit1.coef_ != 0))
 
 # 2.1.7: Create a new reduced X that only includes the non-zero coefficients - show the covariance of the non-zero features (two covariance matrices can be made; X_reducedXT or XT Xreduced (you choose the right one)) . Plot the covariance of the features using plt.imshow. Compared to the plot from 1.1.iii, do we see less covariance?
+X_reduced = fit1.coef_[fit1.coef_ != 0]
+
+test = X_reduced.T
+
+len(test)
+
+
+
